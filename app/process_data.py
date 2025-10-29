@@ -102,17 +102,14 @@ def create_embeddings_with_metadata(sentences, embedding_model):
 # LOADING DATA
 data_folder_path = get_data_folder_path()
 all_data_from_pdfs = load_data_from_pdf(file_path=data_folder_path)
-# print(all_data_from_pdfs[0])
-# print('==='*80)
+
 # SPLITTING DATA
 all_splits = split_docks_into_chunks(documents=all_data_from_pdfs)
-# print(all_splits[0])
+
 # CREATING EMBEDDINGS
-# print('==='*80)
 # embeddings = OpenAIEmbeddings(model="text-embedding-3-large", api_key=st.secrets["OPENAI_API_KEY"],)
 embeddings = create_embeddings_with_metadata(sentences=all_splits,embedding_model=EMBEDDING_MODEL)
-# print(len(embeddings[0]['embedding']))
-# print(embeddings[0])
+
 
 
 
