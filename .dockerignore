@@ -1,0 +1,70 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual Environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Qdrant storage (managed by Docker volume)
+qdrant_storage/
+
+# Environment files
+.env
+.env.local
+environment.yml
+
+# Jupyter
+.ipynb_checkpoints
+*.ipynb
+
+# Logs
+*.log
+logs/
+
+# Data files (will be mounted as volume)
+app/data/*.pdf
+
+# Model files
+*.pkl
+*.pickle
+*.h5
+*.pt
+*.pth
+models/
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Documentation
+README.md
+
+# Prototype
+prototype_basic_logic_n_ui/
+
+# OS
+Thumbs.db
+.DS_Store
