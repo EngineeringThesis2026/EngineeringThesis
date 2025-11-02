@@ -5,14 +5,20 @@ from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 from langchain_core.documents import Document
 
+from langchain_community.embeddings import HuggingFaceEmbeddings
+
+from langchain_huggingface import HuggingFaceEmbeddings
+
+embeddings_for_qdrant_vector_store = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+
 import process_data
 
 # Support both Docker and local setups
-QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
-COLLECTION_NAME = "law_data"
-VECTOR_DATABASE_CLIENT = QdrantClient(url=QDRANT_URL)
+_qdrant_url = os.getenv("QDRANT_URL", "http://localhost:6333")
+_collection_name = "law_data"
+_vector_database_client = QdrantClient(url=_qdrant_url)
 
-vector_size = len(process_data.embeddings[0]['embedding'])
+# vector_size = len(process_data.embeddings[0]['embedding'])
 
 
 def delete_collection_if_exists(vector_database_client: QdrantClient, collection_name: str):
@@ -79,21 +85,31 @@ def upload_to_qdrant(vector_database_client: QdrantClient, collection_name: str,
         collection_name=collection_name,
         points=points
     )
-
     print("✅ Upload complete")
 
 
-# delete_collection_if_exists(
-#     vector_database_client=VECTOR_DATABASE_CLIENT,
-#     collection_name=COLLECTION_NAME
-# )
+lch_vector_store = QdrantVectorStore(client=_vector_database_client,
+                                    collection_name=_collection_name,
+                                    embedding=embeddings_for_qdrant_vector_store,
+                                    content_payload_key="text",)
 
-create_collection_if_not_exists(vector_database_client=VECTOR_DATABASE_CLIENT, collection_name=COLLECTION_NAME, vector_size=vector_size)
+def create_retriever():
+    """
+    Create a retriever from the Qdrant vector store.
+    Returns:
+        retriever: An instance of a retriever for similarity search.
+    """
+    retriever = lch_vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 3})
+    return retriever
 
-points = create_points_from_embeddings(embeddings=process_data.embeddings)
-upload_to_qdrant(vector_database_client=VECTOR_DATABASE_CLIENT, collection_name=COLLECTION_NAME, points=points)
+# Example of adding documents to the vector store
+# from uuid import uuid4
 
-# vector_store = QdrantVectorStore(
-#     client=vector_database_client,
-#     collection_name="law_data",
-# )
+# document_1 = Document(page_content="foo", metadata={"baz": "bar"})
+# document_2 = Document(page_content="thud", metadata={"bar": "baz"})
+# document_3 = Document(page_content="i will be deleted :(")
+
+# documents = [document_1, document_2, document_3]
+# ids = [str(uuid4()) for _ in range(len(documents))]
+# lch_vector_store.add_documents(documents=documents, ids=ids)
+

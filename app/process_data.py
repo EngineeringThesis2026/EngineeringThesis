@@ -13,7 +13,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 # from langchain_openai import OpenAIEmbeddings
 from sentence_transformers import SentenceTransformer
 
-EMBEDDING_MODEL = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+_embedding_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
 
 def get_data_folder_path() -> Path:
     data_folder = Path(__file__).parent / "data"
@@ -100,15 +100,15 @@ def create_embeddings_with_metadata(sentences, embedding_model):
 
 
 # LOADING DATA
-data_folder_path = get_data_folder_path()
-all_data_from_pdfs = load_data_from_pdf(file_path=data_folder_path)
+# data_folder_path = get_data_folder_path()
+# all_data_from_pdfs = load_data_from_pdf(file_path=data_folder_path)
 
-# SPLITTING DATA
-all_splits = split_docks_into_chunks(documents=all_data_from_pdfs)
+# # SPLITTING DATA
+# all_splits = split_docks_into_chunks(documents=all_data_from_pdfs)
 
-# CREATING EMBEDDINGS
-# embeddings = OpenAIEmbeddings(model="text-embedding-3-large", api_key=st.secrets["OPENAI_API_KEY"],)
-embeddings = create_embeddings_with_metadata(sentences=all_splits,embedding_model=EMBEDDING_MODEL)
+# # CREATING EMBEDDINGS
+# # embeddings = OpenAIEmbeddings(model="text-embedding-3-large", api_key=st.secrets["OPENAI_API_KEY"],)
+# embeddings = create_embeddings_with_metadata(sentences=all_splits, embedding_model=_embedding_model)
 
 
 
