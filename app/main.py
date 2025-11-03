@@ -37,14 +37,16 @@ def main():
         system_template="Jesteś pomocnym i profesjonalnym asystentem AI specjalizującym się w doradztwie prawnym. Odpowiadaj wyłącznie na pytania związane z prawem, dostarczając dokładne i zwięzłe informacje.",
         human_template="Pytanie użytkownika: {question}\n\nKontekst:\n{context}"
     )
-    print(prompt_template.format_messages(question="Tutaj trafia przykładowe pytanie użytkownika.", context="Tutaj trafia kontekst pytania."))
+    # print(prompt_template.format_messages(question="Tutaj trafia przykładowe pytanie użytkownika.", context="Tutaj trafia kontekst pytania."))
 
     retriever = vector_database.create_retriever()
+
 
     # RAG chain
     def combine_docs(docs):
         """Combine documents' page_content into a single string"""
         return "\n\n".join([f"{d.metadata}\n{d.page_content}" for d in docs])
+
 
     def rag_chain_fn(question: str):
         """RAG: retrieves documents, combines context, and invokes LLM"""
@@ -53,10 +55,7 @@ def main():
         messages = prompt_template.format_messages(question=question, context=context)
         return llm.invoke(messages)
 
-    # RAG usage
-    response = rag_chain_fn("Czego dotyczy sprawa III AUa 1002/23?")
-    print(response.content)
-
-
 if __name__ == '__main__':
-    main()
+    # main()
+    pass
+    
