@@ -88,28 +88,37 @@ def upload_to_qdrant(vector_database_client: QdrantClient, collection_name: str,
     print("✅ Upload complete")
 
 
-lch_vector_store = QdrantVectorStore(client=_vector_database_client,
-                                    collection_name=_collection_name,
-                                    embedding=embeddings_for_qdrant_vector_store,
-                                    content_payload_key="text",)
+# lch_vector_store = QdrantVectorStore(client=_vector_database_client,
+#                                     collection_name=_collection_name,
+#                                     embedding=embeddings_for_qdrant_vector_store,
+#                                     content_payload_key="text",)
+
+def get_vector_store():
+    """
+    Create QdrantVectorStore lazily (only after collection exists).
+    """
+    return QdrantVectorStore(
+        client=_vector_database_client,
+        collection_name=_collection_name,
+        embedding=embeddings_for_qdrant_vector_store,
+        content_payload_key="text",
+    )
+
+# def create_retriever():
+#     """
+#     Create a retriever from the Qdrant vector store.
+#     Returns:
+#         retriever: An instance of a retriever for similarity search.
+#     """
+#     retriever = lch_vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 3})
+#     return retriever
 
 def create_retriever():
     """
-    Create a retriever from the Qdrant vector store.
-    Returns:
-        retriever: An instance of a retriever for similarity search.
+    Create a retriever after data is loaded.
     """
-    retriever = lch_vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 3})
-    return retriever
+    store = get_vector_store()
+    return store.as_retriever(search_type="similarity", search_kwargs={"k": 1})
 
-# Example of adding documents to the vector store
-# from uuid import uuid4
 
-# document_1 = Document(page_content="foo", metadata={"baz": "bar"})
-# document_2 = Document(page_content="thud", metadata={"bar": "baz"})
-# document_3 = Document(page_content="i will be deleted :(")
-
-# documents = [document_1, document_2, document_3]
-# ids = [str(uuid4()) for _ in range(len(documents))]
-# lch_vector_store.add_documents(documents=documents, ids=ids)
 

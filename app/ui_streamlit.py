@@ -2,7 +2,10 @@ import streamlit as st
 import datetime
 import llm_model
 import vector_database
-# import main
+import process_data
+
+def build_history():
+    return "\n".join(f"{m['role']}: {m['content']}" for m in st.session_state["messages"])
 
 def transform_to_conversation_text()->str:
     """Loop through the history of all messages in a session and save all the contents to a string variable, then return it."""
@@ -18,6 +21,34 @@ st.title("Konsultacje prawne AI.")
 # Checking the time when the conversation starts
 if "conversation_data" not in st.session_state:
     st.session_state['conversation_data'] = datetime.datetime.now().strftime('%Y-%m-%d-%H:%M')
+
+if 'data_imported' not in st.session_state:
+    st.session_state['data_imported'] = False
+
+if st.session_state['data_imported'] == False:
+    st.write("Data has not been imported yet. Importing now...")
+    
+    data_folder_path = process_data.get_data_folder_path()
+    all_data_from_pdfs = process_data.load_data_from_pdf(file_path=data_folder_path)
+
+    # SPLITTING DATA
+    all_splits = process_data.split_docks_into_chunks(documents=all_data_from_pdfs)
+
+    # CREATING EMBEDDINGS
+    embeddings = process_data.create_embeddings_with_metadata(sentences=all_splits,embedding_model=process_data._embedding_model)
+
+    # VECTOR DATABASE OPERATIONS
+    vector_size = len(embeddings[0]['embedding'])
+
+    vector_database.create_collection_if_not_exists(vector_database_client=vector_database._vector_database_client,
+                                                    collection_name=vector_database._collection_name, vector_size=vector_size)
+    
+    points = vector_database.create_points_from_embeddings(embeddings=embeddings)
+    vector_database.upload_to_qdrant(vector_database_client=vector_database._vector_database_client,
+                                        collection_name=vector_database._collection_name, points=points)
+
+    st.write("Data import completed.")
+    st.session_state['data_imported'] = True
 
 # user settings in sidebar
 st.sidebar.write(f'Ustawienia')
@@ -38,7 +69,7 @@ st.sidebar.write(f"llm temp: {llm.temperature}, llm max tokens: {llm.max_tokens}
 # Creating Chat Prompt Template
 prompt_template = llm_model.create_chat_prompt_template(
     system_template="Jesteś pomocnym i profesjonalnym asystentem AI specjalizującym się w doradztwie prawnym. Odpowiadaj wyłącznie na pytania związane z prawem, dostarczając dokładne i zwięzłe informacje.",
-    human_template="Pytanie użytkownika: {question}\n\nKontekst:\n{context}"
+    human_template="Historia rozmowy: {history}\nPytanie użytkownika: {question}\n\nKontekst:\n{context}"
 )
 
 retriever = vector_database.create_retriever()
@@ -49,19 +80,15 @@ def combine_docs(docs):
         return "\n\n".join([f"{d.metadata}\n{d.page_content}" for d in docs])
 
 
-def rag_chain_fn(question: str):
+def rag_chain_fn(question: str, retriever=retriever, llm=llm, prompt_template=prompt_template):
         """RAG: retrieves documents, combines context, and invokes LLM"""
+        history = build_history()
         docs = retriever.invoke(question)  # retrieve relevant documents
         context = combine_docs(docs)       # combine docks page_content's into a string
         print(context)  # For debugging
-        messages = prompt_template.format_messages(question=question, context=context)
+        messages = prompt_template.format_messages(question=question, context=context, history=history)
         return llm.invoke(messages)
 
-
-
-# ==============================
-# STREAMLIT CHAT UI
-# ==============================
 
 # INIT SESSION HISTORY
 if "messages" not in st.session_state:
