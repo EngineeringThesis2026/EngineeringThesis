@@ -5,6 +5,7 @@ langchain-qdrant==1.1.0
 langchain-core==1.0.1
 langchain-classic==1.0.0
 langchain-text-splitters==1.0.0
+langchain-huggingface==1.0.0
 qdrant-client==1.15.1
 openai==2.6.1
 python-dotenv==1.2.1
