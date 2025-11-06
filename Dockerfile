@@ -26,5 +26,4 @@ COPY .streamlit/ ./.streamlit/
 EXPOSE 8501
 
 # Start Streamlit application
-#CMD ["streamlit", "hello", "--server.address=0.0.0.0", "--server.port=8501"]
-CMD streamlit hello
+CMD ["streamlit", "run", "app/ui_streamlit.py", "--server.address=0.0.0.0", "--server.port=8501"]
