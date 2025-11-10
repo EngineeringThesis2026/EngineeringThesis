@@ -13,8 +13,8 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 # from langchain_openai import OpenAIEmbeddings
 from sentence_transformers import SentenceTransformer
 
-from app.exceptions import EmbeddingModelError, PDFProcessingError, DataImportError
-from app.logger import logger
+from exceptions import EmbeddingModelError, PDFProcessingError, DataImportError
+from logger import logger
 
 # Global embedding model instance (lazy loaded)
 _embedding_model = None

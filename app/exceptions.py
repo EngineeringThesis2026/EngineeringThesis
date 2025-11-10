@@ -39,3 +39,13 @@ class PDFProcessingError(Exception):
 class DataImportError(Exception):
     """Raised when data import process fails (no documents loaded, splitting errors, etc.)."""
     pass
+
+
+class LLMProviderError(Exception):
+    """Base exception for LLM provider errors."""
+    pass
+
+
+class AllProvidersFailedError(LLMProviderError):
+    """Raised when all configured LLM providers fail."""
+    pass

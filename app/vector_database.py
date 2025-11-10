@@ -10,8 +10,8 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 
 from langchain_huggingface import HuggingFaceEmbeddings
 
-from app.exceptions import QdrantConnectionError, QdrantOperationError, EmbeddingModelError
-from app.logger import logger
+from exceptions import QdrantConnectionError, QdrantOperationError, EmbeddingModelError
+from logger import logger
 
 import process_data
 

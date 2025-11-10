@@ -7,65 +7,68 @@ from langchain_core.output_parsers import StrOutputParser
 from typing import Optional
 import openai
 
-from app.exceptions import APIKeyMissingError, APIKeyInvalidError
-from app.logger import logger
+from exceptions import APIKeyMissingError, APIKeyInvalidError, AllProvidersFailedError
+from logger import logger
+from llm_providers import LLMManager, OpenAIProvider, AnthropicProvider
 
-def create_llm(model='gpt-4o-mini',temperature=0, max_tokens=None,timeout=None,max_retries=2) -> Optional[ChatOpenAI]:
+def create_llm(model='gpt-4o-mini', temperature=0, max_tokens=None, timeout=None, max_retries=2):
     """
-    Create and return a ChatOpenAI language model instance with specified parameters.
+    Create and return an LLMManager with automatic fallback support.
+
+    Primary provider: OpenAI (gpt-4o-mini)
+    Fallback provider: Anthropic Claude (claude-3-haiku)
+
     Args:
         model (str): The name of the OpenAI model to use.
         temperature (float): The temperature setting for the model.
         max_tokens (int, optional): The maximum number of tokens for the response.
-        timeout (int, optional): The timeout setting for the model.
+        timeout (int, optional): The timeout setting for the model (not used for fallback).
         max_retries (int): The maximum number of retries for API calls.
+
     Returns:
-        ChatOpenAI: An instance of the ChatOpenAI language model, or None if error occurs.
+        LLMManager: An LLM manager instance with fallback support.
+
     Raises:
-        APIKeyMissingError: If OpenAI API key is not found in secrets.
-        APIKeyInvalidError: If OpenAI API key is invalid or expired.
+        AllProvidersFailedError: If no providers are configured with valid API keys.
     """
     try:
-        # Check if API key exists in secrets
-        if "OPENAI_API_KEY" not in st.secrets:
-            logger.error("OpenAI API key not found in Streamlit secrets")
-            raise APIKeyMissingError("OpenAI API key not found in .streamlit/secrets.toml")
+        # Create providers in fallback order
+        providers = [
+            # Primary: OpenAI
+            OpenAIProvider(
+                model=model,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                max_retries=max_retries
+            ),
+            # Fallback: Anthropic Claude (Haiku - fast and cheap)
+            AnthropicProvider(
+                model='claude-3-haiku-20240307',
+                temperature=temperature,
+                max_tokens=max_tokens or 1024,
+                max_retries=max_retries
+            )
+        ]
 
-        api_key = st.secrets["OPENAI_API_KEY"]
+        # Create LLM manager with fallback support
+        llm_manager = LLMManager(providers=providers)
 
-        # Validate API key is not empty
-        if not api_key or not isinstance(api_key, str) or api_key.strip() == "":
-            logger.error("OpenAI API key is empty or invalid format")
-            raise APIKeyMissingError("OpenAI API key is empty or invalid")
+        logger.info(f"LLM Manager created with {len(llm_manager.get_available_providers())} available provider(s)")
+        logger.info(f"Available providers: {', '.join(llm_manager.get_available_providers())}")
 
-        # Create LLM instance
-        llm = ChatOpenAI(
-            model=model,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            timeout=timeout,
-            max_retries=max_retries,
-            api_key=api_key,
+        return llm_manager
+
+    except AllProvidersFailedError as e:
+        logger.error(f"Failed to initialize any LLM provider: {e}")
+        raise APIKeyMissingError(
+            "No LLM providers available. Please configure at least one API key:\n"
+            "- OPENAI_API_KEY for OpenAI (primary)\n"
+            "- ANTHROPIC_API_KEY for Anthropic Claude (fallback)"
         )
 
-        logger.info(f"Successfully created ChatOpenAI instance with model: {model}")
-        return llm
-
-    except KeyError as e:
-        logger.error(f"KeyError accessing secrets: {e}")
-        raise APIKeyMissingError(f"OpenAI API key not found in secrets: {e}")
-
-    except openai.AuthenticationError as e:
-        logger.error(f"OpenAI authentication error: {e}")
-        raise APIKeyInvalidError(f"Invalid or expired OpenAI API key: {e}")
-
-    except (ValueError, TypeError) as e:
-        logger.error(f"Invalid parameters for ChatOpenAI: {e}")
-        raise APIKeyInvalidError(f"Invalid configuration for OpenAI model: {e}")
-
     except Exception as e:
-        logger.error(f"Unexpected error creating LLM: {type(e).__name__}: {e}")
-        raise APIKeyInvalidError(f"Failed to create OpenAI model: {e}")
+        logger.error(f"Unexpected error creating LLM manager: {type(e).__name__}: {e}")
+        raise APIKeyInvalidError(f"Failed to create LLM manager: {e}")
 
 # # Przykład użycia system message z ChatPromptTemplate
 # system_prompt = SystemMessagePromptTemplate.from_template(
