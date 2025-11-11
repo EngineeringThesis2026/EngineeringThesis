@@ -16,7 +16,18 @@ import process_data
 # Support both Docker and local setups
 _qdrant_url = os.getenv("QDRANT_URL", "http://localhost:6333")
 _collection_name = "law_data"
-_vector_database_client = QdrantClient(url=_qdrant_url)
+
+# Initialize Qdrant client with error handling (#3 from task1.md)
+try:
+    print(f"INFO: Attempting to connect to Qdrant at {_qdrant_url}")
+    _vector_database_client = QdrantClient(url=_qdrant_url)
+
+    # Verify connection by getting collections
+    _vector_database_client.get_collections()
+    print("INFO: Successfully connected to Qdrant")
+except Exception as e:
+    print(f"CRITICAL ERROR: Failed to connect to Qdrant at {_qdrant_url}: {e}")
+    raise ConnectionError(f"Cannot connect to Qdrant database: {e}") from e
 
 # vector_size = len(process_data.embeddings[0]['embedding'])
 
@@ -41,11 +52,19 @@ def create_collection_if_not_exists(vector_database_client: QdrantClient, collec
         collection_name (str): The name of the collection to create.
         vector_size (int): The size of the vectors to be stored in the collection.
     """
-    if not vector_database_client.collection_exists(collection_name):
-        vector_database_client.create_collection(
-            collection_name=collection_name,
-            vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE)
-        )
+    try:
+        if not vector_database_client.collection_exists(collection_name):
+            print(f"INFO: Creating collection '{collection_name}' with vector size {vector_size}")
+            vector_database_client.create_collection(
+                collection_name=collection_name,
+                vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE)
+            )
+            print(f"INFO: Collection '{collection_name}' created successfully")
+        else:
+            print(f"INFO: Collection '{collection_name}' already exists")
+    except Exception as e:
+        print(f"CRITICAL ERROR: Failed to create collection '{collection_name}': {e}")
+        raise RuntimeError(f"Cannot create Qdrant collection: {e}") from e
 
 
 def create_points_from_embeddings(embeddings: list) -> list:
@@ -81,11 +100,56 @@ def upload_to_qdrant(vector_database_client: QdrantClient, collection_name: str,
         points (list): A list of dictionaries containing embeddings and metadata.
     """
 
-    vector_database_client.upsert(
-        collection_name=collection_name,
-        points=points
-    )
-    print("✅ Upload complete")
+    if not points or len(points) == 0:
+        print("WARNING: No points to upload to Qdrant")
+        return
+
+    try:
+        print(f"INFO: Uploading {len(points)} point(s) to collection '{collection_name}'")
+        vector_database_client.upsert(
+            collection_name=collection_name,
+            points=points
+        )
+
+        # Verify upload succeeded (#5 from task1.md)
+        collection_info = vector_database_client.get_collection(collection_name)
+        points_count = collection_info.points_count
+
+        if points_count == 0:
+            raise RuntimeError(f"Upload verification failed: Collection '{collection_name}' has 0 points after upload")
+
+        print(f"INFO: Upload complete - {points_count} point(s) now in collection '{collection_name}'")
+    except Exception as e:
+        print(f"CRITICAL ERROR: Failed to upload to Qdrant: {e}")
+        raise RuntimeError(f"Cannot upload data to Qdrant: {e}") from e
+
+
+def verify_embeddings_exist(vector_database_client: QdrantClient, collection_name: str) -> bool:
+    """
+    Verify that embeddings exist in the vector database (#4 from task1.md).
+    Args:
+        vector_database_client (QdrantClient): An instance of QdrantClient.
+        collection_name (str): The name of the collection to check.
+    Returns:
+        bool: True if embeddings exist, raises exception otherwise.
+    """
+    try:
+        # Check if collection exists
+        if not vector_database_client.collection_exists(collection_name):
+            raise RuntimeError(f"Collection '{collection_name}' does not exist in Qdrant")
+
+        # Check if collection has any points
+        collection_info = vector_database_client.get_collection(collection_name)
+        points_count = collection_info.points_count
+
+        if points_count == 0:
+            raise RuntimeError(f"No embeddings found in collection '{collection_name}' (points count = 0)")
+
+        print(f"INFO: Verified {points_count} embedding(s) exist in collection '{collection_name}'")
+        return True
+    except Exception as e:
+        print(f"CRITICAL ERROR: Failed to verify embeddings in vector database: {e}")
+        raise RuntimeError(f"Cannot verify embeddings in database: {e}") from e
 
 
 # lch_vector_store = QdrantVectorStore(client=_vector_database_client,
@@ -95,14 +159,27 @@ def upload_to_qdrant(vector_database_client: QdrantClient, collection_name: str,
 
 def get_vector_store():
     """
-    Create QdrantVectorStore lazily (only after collection exists).
+    Create QdrantVectorStore lazily (only after collection exists) (#6 from task1.md).
     """
-    return QdrantVectorStore(
-        client=_vector_database_client,
-        collection_name=_collection_name,
-        embedding=embeddings_for_qdrant_vector_store,
-        content_payload_key="text",
-    )
+    try:
+        print(f"INFO: Creating QdrantVectorStore for collection '{_collection_name}'")
+
+        # Verify collection exists before creating vector store
+        if not _vector_database_client.collection_exists(_collection_name):
+            raise RuntimeError(f"Cannot create vector store: Collection '{_collection_name}' does not exist")
+
+        vector_store = QdrantVectorStore(
+            client=_vector_database_client,
+            collection_name=_collection_name,
+            embedding=embeddings_for_qdrant_vector_store,
+            content_payload_key="text",
+        )
+
+        print("INFO: QdrantVectorStore created successfully")
+        return vector_store
+    except Exception as e:
+        print(f"CRITICAL ERROR: Failed to create QdrantVectorStore: {e}")
+        raise RuntimeError(f"Cannot create vector store: {e}") from e
 
 # def create_retriever():
 #     """

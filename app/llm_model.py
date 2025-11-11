@@ -17,15 +17,45 @@ def create_llm(model='gpt-4o-mini',temperature=0, max_tokens=None,timeout=None,m
     Returns:
         ChatOpenAI: An instance of the ChatOpenAI language model.
     """
-    llm = ChatOpenAI(
-        model=model,
-        temperature=temperature,
-        max_tokens=max_tokens,
-        timeout=timeout,
-        max_retries=max_retries,
-        api_key=st.secrets["OPENAI_API_KEY"],
-    )
-    return llm
+    # Validate OpenAI API key exists in secrets
+    try:
+        if "OPENAI_API_KEY" not in st.secrets:
+            raise KeyError("OPENAI_API_KEY not found in Streamlit secrets")
+
+        api_key = st.secrets["OPENAI_API_KEY"]
+
+        if not api_key or api_key.strip() == "":
+            raise ValueError("OPENAI_API_KEY is empty in Streamlit secrets")
+
+        # Basic format validation (OpenAI keys start with 'sk-')
+        if not api_key.startswith("sk-"):
+            print("WARNING: OpenAI API key does not start with 'sk-' - may be invalid")
+
+        print("INFO: OpenAI API key validated successfully")
+    except KeyError as e:
+        print(f"CRITICAL ERROR: {e}")
+        print("Please ensure .streamlit/secrets.toml exists and contains OPENAI_API_KEY")
+        raise RuntimeError(f"Missing OpenAI API key in configuration: {e}") from e
+    except Exception as e:
+        print(f"CRITICAL ERROR: Failed to validate OpenAI API key: {e}")
+        raise RuntimeError(f"Cannot validate OpenAI API key: {e}") from e
+
+    # Create LLM instance
+    try:
+        print(f"INFO: Creating ChatOpenAI instance with model '{model}'")
+        llm = ChatOpenAI(
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            timeout=timeout,
+            max_retries=max_retries,
+            api_key=api_key,
+        )
+        print("INFO: ChatOpenAI instance created successfully")
+        return llm
+    except Exception as e:
+        print(f"CRITICAL ERROR: Failed to create ChatOpenAI instance: {e}")
+        raise RuntimeError(f"Cannot create LLM: {e}") from e
 
 # # Przykład użycia system message z ChatPromptTemplate
 # system_prompt = SystemMessagePromptTemplate.from_template(

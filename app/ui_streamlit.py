@@ -38,8 +38,8 @@ if st.session_state['data_imported'] == False:
     embeddings = process_data.create_embeddings_with_metadata(sentences=all_splits,embedding_model=process_data._embedding_model)
 
     # VECTOR DATABASE OPERATIONS
-    vector_size = len(embeddings[0]['embedding'])
-
+    # vector_size = len(embeddings[0]['embedding'])
+    vector_size = 384
     vector_database.create_collection_if_not_exists(vector_database_client=vector_database._vector_database_client,
                                                     collection_name=vector_database._collection_name, vector_size=vector_size)
     

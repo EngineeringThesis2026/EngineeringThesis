@@ -78,3 +78,7 @@ Thumbs.db
 
 # Environment YML files
 environment.yml
+
+# MCP
+.serena/
+.claude/

@@ -13,7 +13,11 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 # from langchain_openai import OpenAIEmbeddings
 from sentence_transformers import SentenceTransformer
 
-_embedding_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+# Initialize embedding model with error handling
+try:
+    _embedding_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+except Exception as e:
+    raise RuntimeError(f"Cannot initialize embedding model: {e}") from e
 
 def get_data_folder_path() -> Path:
     data_folder = Path(__file__).parent / "data"
@@ -32,23 +36,53 @@ def load_data_from_pdf(file_path: Path) ->list:
     """
     documents = []
 
-    for pdf_path in file_path.glob("*.pdf"):
-        # print(f"Wczytuję plik: {pdf_path}")
+    # Check if directory exists
+    try:
+        if not file_path.exists():
+            print(f"WARNING: Data directory does not exist: {file_path}")
+            return []
 
-        loader = PyPDFLoader(str(pdf_path))
-        pages = loader.load()
-        
-        for i, page in enumerate(pages):
-            doc = Document(
-                page_content=page.page_content,
-                metadata={
-                    "source": pdf_path.name,
-                    "page_number": i + 1,
-                    "file_path": str(pdf_path),
-                }
-            )
-            documents.append(doc)
-        
+        if not file_path.is_dir():
+            print(f"WARNING: Path is not a directory: {file_path}")
+            return []
+    except Exception as e:
+        print(f"WARNING: Error checking data directory: {e}")
+        return []
+
+    # Check if any PDF files exist (#1 from task1.md)
+    try:
+        pdf_files = list(file_path.glob("*.pdf"))
+        if not pdf_files:
+            print(f"WARNING: No PDF files found in {file_path} directory")
+            return []
+
+        print(f"INFO: Found {len(pdf_files)} PDF file(s) to process")
+    except Exception as e:
+        print(f"WARNING: Error searching for PDF files: {e}")
+        return []
+
+    # Load each PDF file
+    for pdf_path in pdf_files:
+        try:
+            print(f"INFO: Loading file: {pdf_path.name}")
+            loader = PyPDFLoader(str(pdf_path))
+            pages = loader.load()
+
+            for i, page in enumerate(pages):
+                doc = Document(
+                    page_content=page.page_content,
+                    metadata={
+                        "source": pdf_path.name,
+                        "page_number": i + 1,
+                        "file_path": str(pdf_path),
+                    }
+                )
+                documents.append(doc)
+        except Exception as e:
+            print(f"WARNING: Failed to load PDF {pdf_path.name}: {e}")
+            continue
+
+    print(f"INFO: Successfully loaded {len(documents)} document page(s)")
     return documents
     
 
@@ -63,11 +97,24 @@ def split_docks_into_chunks(documents: list,chunk_size: int=1000, chunk_overlap:
         list: A list of Document objects representing the split chunks.
     """
 
-    text_splitter = RecursiveCharacterTextSplitter(
-    chunk_size=1000, chunk_overlap=200, add_start_index=True
-    )
-    all_splits = text_splitter.split_documents(documents)
-    return all_splits
+    # Check if documents list is empty (#2 from task1.md)
+    if not documents or len(documents) == 0:
+        print("WARNING: No documents to split (documents count = 0)")
+        return []
+
+    print(f"INFO: Splitting {len(documents)} document(s) into chunks")
+
+    try:
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000, chunk_overlap=200, add_start_index=True
+        )
+        all_splits = text_splitter.split_documents(documents)
+
+        print(f"INFO: Created {len(all_splits)} chunk(s) from documents")
+        return all_splits
+    except Exception as e:
+        print(f"WARNING: Error splitting documents into chunks: {e}")
+        return []
 
 
 # def create_embedding(sentences):
@@ -86,17 +133,28 @@ def create_embeddings_with_metadata(sentences, embedding_model):
         list: A list of dictionaries, each containing the embedding, text, and metadata.
     """
 
-    texts = [sentence.page_content for sentence in sentences]
-    embeddings = embedding_model.encode(texts, show_progress_bar=True)
+    if not sentences or len(sentences) == 0:
+        print("WARNING: No sentences to create embeddings for")
+        return []
 
-    embeddings_with_metadata = []
-    for emb, sentence in zip(embeddings, sentences):
-        embeddings_with_metadata.append({
-            "embedding": emb,
-            "text": sentence.page_content,
-            "metadata": sentence.metadata
-        })
-    return embeddings_with_metadata
+    try:
+        print(f"INFO: Creating embeddings for {len(sentences)} sentence(s)")
+        texts = [sentence.page_content for sentence in sentences]
+        embeddings = embedding_model.encode(texts, show_progress_bar=True)
+
+        embeddings_with_metadata = []
+        for emb, sentence in zip(embeddings, sentences):
+            embeddings_with_metadata.append({
+                "embedding": emb,
+                "text": sentence.page_content,
+                "metadata": sentence.metadata
+            })
+
+        print(f"INFO: Successfully created {len(embeddings_with_metadata)} embedding(s)")
+        return embeddings_with_metadata
+    except Exception as e:
+        print(f"CRITICAL ERROR: Failed to create embeddings: {e}")
+        raise RuntimeError(f"Cannot create embeddings: {e}") from e
 
 
 # LOADING DATA
