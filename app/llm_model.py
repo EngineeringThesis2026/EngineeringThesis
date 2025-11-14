@@ -5,7 +5,7 @@ from langchain_core.prompts import PromptTemplate, FewShotPromptTemplate
 from langchain_core.prompts import SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
-def create_llm(model='gpt-4o-mini',temperature=0, max_tokens=None,timeout=None,max_retries=2)->ChatOpenAI:
+def create_llm(model='gpt-4o-mini',temperature=0, max_tokens=None,timeout=None,max_retries=2, api_key=None)->ChatOpenAI:
     """
     Create and return a ChatOpenAI language model instance with specified parameters.
     Args:
@@ -17,13 +17,17 @@ def create_llm(model='gpt-4o-mini',temperature=0, max_tokens=None,timeout=None,m
     Returns:
         ChatOpenAI: An instance of the ChatOpenAI language model.
     """
+    if api_key is None:
+        api_key = st.secrets["OPENAI_API_KEY"]
+    else:
+        api_key = api_key
     llm = ChatOpenAI(
         model=model,
         temperature=temperature,
         max_tokens=max_tokens,
         timeout=timeout,
         max_retries=max_retries,
-        api_key=st.secrets["OPENAI_API_KEY"],
+        api_key=api_key,
     )
     return llm
 

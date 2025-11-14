@@ -41,6 +41,7 @@ venv.bak/
 # Streamlit
 .streamlit/*.toml
 !.streamlit/*.toml.example
+!.streamlit/config.toml
 
 # Qdrant Vector Database
 qdrant_storage/
