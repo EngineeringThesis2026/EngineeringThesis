@@ -48,8 +48,8 @@ def load_data_from_pdf(file_path: Path) ->list:
                 }
             )
             documents.append(doc)
-        
-    return documents
+    
+    return documents or None
     
 
 def split_docks_into_chunks(documents: list,chunk_size: int=1000, chunk_overlap: int=200) ->list:
@@ -87,7 +87,7 @@ def create_embeddings_with_metadata(sentences, embedding_model):
     """
 
     texts = [sentence.page_content for sentence in sentences]
-    embeddings = embedding_model.encode(texts, show_progress_bar=True)
+    embeddings = embedding_model.encode(texts, show_progress_bar=False)
 
     embeddings_with_metadata = []
     for emb, sentence in zip(embeddings, sentences):
