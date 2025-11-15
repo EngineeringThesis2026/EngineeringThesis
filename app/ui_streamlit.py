@@ -3,7 +3,7 @@ import datetime
 import llm_model
 import vector_database
 import process_data
-
+import prompt_texts
 
 def build_history():
     return "\n".join(f"{m['role']}: {m['content']}" for m in st.session_state["messages"])
@@ -82,18 +82,30 @@ if not api_key_available:
         api_key_available = user_input_key  # aktualizacja dostępnego klucza
 
 if api_key_available:
+    # Create LLM instance for question classification
+    llm_question_classifier = llm_model.create_llm(
+        api_key=api_key_available,
+    )
+    # Create main LLM instance
     llm = llm_model.create_llm(
         api_key=api_key_available,
         temperature=model_temperature / 100,
         max_tokens=model_tokens
     )
     st.sidebar.success('Połączenie z modelem LLM.')
+
 if st.session_state['data_imported']:
     st.sidebar.success('Dostęp do danych prawnych jest gotowy.')
 
 # st.sidebar.write(f"llm temp: {llm.temperature}, llm max tokens: {llm.max_tokens}")  # For debugging
 
-# Creating Chat Prompt Template
+# Chat Prompt Template for question classification
+question_classification_prompt = llm_model.create_chat_prompt_template(
+    system_template=prompt_texts.text_for_system_template_question_classification_prompt,
+    human_template="Historia konwersacji: {history}\nPytanie użytkownika: {question}"
+)
+
+# Creating Chat Prompt Template for main LLM functionality with RAG
 prompt_template = llm_model.create_chat_prompt_template(
     system_template="Jesteś pomocnym i profesjonalnym asystentem AI specjalizującym się w doradztwie prawnym. Odpowiadaj wyłącznie na pytania związane z prawem, dostarczając dokładne i zwięzłe informacje. Na wiadomość uytkownika z podziękowaniem odpowiadaj miło wyraając chęć dalszej pomocy.",
     human_template="Historia rozmowy: {history}\nPytanie użytkownika: {question}\n\nKontekst:\n{context}"
@@ -107,14 +119,28 @@ def combine_docs(docs):
         return "\n\n".join([f"{d.metadata}\n{d.page_content}" for d in docs])
 
 
-def rag_chain_fn(question: str, retriever=retriever, llm=llm, prompt_template=prompt_template):
+def rag_chain_fn(question: str,retriever=retriever,
+                llm=llm, prompt_template=prompt_template,
+                llm_question_classifier=llm_question_classifier,
+                question_classification_prompt=question_classification_prompt):
         """RAG: retrieves documents, combines context, and invokes LLM"""
-        history = build_history()
-        docs = retriever.invoke(question)  # retrieve relevant documents
-        context = combine_docs(docs)       # combine docks page_content's into a string
-        print(context)  # For debugging
-        messages = prompt_template.format_messages(question=question, context=context, history=history)
-        return llm.invoke(messages)
+        # QUESTION CLASSIFICATION: if the question is legal go to RAG, else answer directly.
+        
+        msg_to_classify = question_classification_prompt.format_messages(question=question, history=build_history())
+        classification_response = llm_question_classifier.invoke(msg_to_classify)
+        classification_answer = classification_response.content.strip().upper()
+        print(f"Classification answer: {classification_answer}")  # For debugging
+        if classification_answer == "NIE":
+            history = build_history()
+            messages = prompt_template.format_messages(question=question, context='brak kontekstu', history=history)
+            return llm.invoke(messages)
+        else:
+            history = build_history()
+            docs = retriever.invoke(question)  # retrieve relevant documents
+            context = combine_docs(docs)       # combine docks page_content's into a string
+            print(context)  # For debugging
+            messages = prompt_template.format_messages(question=question, context=context, history=history)
+            return llm.invoke(messages)
 
 
 # INIT SESSION HISTORY
