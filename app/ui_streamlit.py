@@ -4,6 +4,8 @@ import llm_model
 import vector_database
 import process_data
 import prompt_texts
+import upload_pdf_file
+
 
 def build_history():
     return "\n".join(f"{m['role']}: {m['content']}" for m in st.session_state["messages"])
@@ -30,6 +32,9 @@ if 'data_imported' not in st.session_state:
 
 if 'user_input_openai_api_key' not in st.session_state:
     st.session_state['user_input_openai_api_key'] = None
+
+if 'user_uploaded_pdf_text' not in st.session_state:
+    st.session_state['user_uploaded_pdf_text'] = None
 
 if st.session_state['data_imported'] == False:
     with st.spinner('Importowanie danych... Proszę czekać.'):
@@ -102,13 +107,13 @@ if st.session_state['data_imported']:
 # Chat Prompt Template for question classification
 question_classification_prompt = llm_model.create_chat_prompt_template(
     system_template=prompt_texts.text_for_system_template_question_classification_prompt,
-    human_template="Historia konwersacji: {history}\nPytanie użytkownika: {question}"
+    human_template="Historia konwersacji: {history}\nPytanie użytkownika: {question}\n Kontekst dodany przez użytkownika: {user_uploaded_pdf_text}"
 )
 
 # Creating Chat Prompt Template for main LLM functionality with RAG
 prompt_template = llm_model.create_chat_prompt_template(
     system_template="Jesteś pomocnym i profesjonalnym asystentem AI specjalizującym się w doradztwie prawnym. Odpowiadaj wyłącznie na pytania związane z prawem, dostarczając dokładne i zwięzłe informacje. Na wiadomość uytkownika z podziękowaniem odpowiadaj miło wyraając chęć dalszej pomocy.",
-    human_template="Historia rozmowy: {history}\nPytanie użytkownika: {question}\n\nKontekst:\n{context}"
+    human_template="Historia rozmowy: {history}\nPytanie użytkownika: {question}\n\nKontekst z bazy danych:\n{context}\n Kontekst dodany przez użytkownika: {user_uploaded_pdf_text}"
 )
 
 retriever = vector_database.create_retriever()
@@ -124,22 +129,29 @@ def rag_chain_fn(question: str,retriever=retriever,
                 llm_question_classifier=llm_question_classifier,
                 question_classification_prompt=question_classification_prompt):
         """RAG: retrieves documents, combines context, and invokes LLM"""
+        # Get user-uploaded PDF text if available
+        if st.session_state['user_uploaded_pdf_text'] is not None:
+            user_uploaded_pdf_text = st.session_state['user_uploaded_pdf_text']
+        else:
+            user_uploaded_pdf_text = "brak dodatkowego kontekstu od użytkownika"
+
         # QUESTION CLASSIFICATION: if the question is legal go to RAG, else answer directly.
-        
-        msg_to_classify = question_classification_prompt.format_messages(question=question, history=build_history())
+        msg_to_classify = question_classification_prompt.format_messages(question=question, history=build_history(), user_uploaded_pdf_text=user_uploaded_pdf_text)
         classification_response = llm_question_classifier.invoke(msg_to_classify)
         classification_answer = classification_response.content.strip().upper()
         print(f"Classification answer: {classification_answer}")  # For debugging
         if classification_answer == "NIE":
             history = build_history()
-            messages = prompt_template.format_messages(question=question, context='brak kontekstu', history=history)
+            messages = prompt_template.format_messages(question=question, context='brak kontekstu', history=history, user_uploaded_pdf_text=user_uploaded_pdf_text)
+            st.write(messages)  # For debugging
             return llm.invoke(messages)
         else:
             history = build_history()
             docs = retriever.invoke(question)  # retrieve relevant documents
             context = combine_docs(docs)       # combine docks page_content's into a string
-            print(context)  # For debugging
-            messages = prompt_template.format_messages(question=question, context=context, history=history)
+            # print(context)  # For debugging
+            messages = prompt_template.format_messages(question=question, context=context, history=history, user_uploaded_pdf_text=user_uploaded_pdf_text)
+            st.write(messages)  # For debugging
             return llm.invoke(messages)
 
 
@@ -155,6 +167,16 @@ for msg in st.session_state["messages"]:
 # USER INPUT
 user_input = st.chat_input("Wpisz swoje pytanie prawne tutaj:")
 
+
+uploaded_file = st.file_uploader('Załącz plik PDF', type="pdf")
+
+# PDF UPLOAD HANDLING
+if uploaded_file is not None:
+    extracted_text_from_pdf = upload_pdf_file.extract_text_from_pdf(uploaded_file)
+    st.session_state["user_uploaded_pdf_text"] = extracted_text_from_pdf
+    st.sidebar.success('Dołączono dodatkowy kontekst z pliku PDF.')
+    
+
 if user_input:
     # Show user message
     st.session_state["messages"].append({"role": "user", "content": user_input})
@@ -169,6 +191,12 @@ if user_input:
         st.session_state["messages"].append({"role": "assistant", "content": response.content})
         with st.chat_message("assistant"):
             st.write(response.content)
+
+
+print('END OF THE ITERATION')
+uploaded_file = None
+extracted_text_from_pdf = None
+st.session_state['user_uploaded_pdf_text'] = None
 
 # Download conversation button
 if len(st.session_state["messages"]) > 1:
