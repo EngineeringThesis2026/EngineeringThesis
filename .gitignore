@@ -79,3 +79,6 @@ Thumbs.db
 
 # Environment YML files
 environment.yml
+
+# PyTest
+.pytest_cache/
