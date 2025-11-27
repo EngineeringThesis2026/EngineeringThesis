@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install black flake8
+      
+      - name: Run Black
+        run: black --check .
+      
+      - name: Run Flake8
+        run: flake8 .
+      
+      - name: Check dependencies for vulnerabilities
+        run: pip-audit -r requirements.txt
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Build Docker images
+        run: docker compose build
+      
+      - name: Start containers
+        run: docker compose up -d
+      
+      - name: Wait for services
+        run: sleep 10
+      
+      - name: Check containers are running
+        run: docker compose ps
+      
+      - name: Stop containers
+        run: docker compose down

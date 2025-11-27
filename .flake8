@@ -1,0 +1,4 @@
+[flake8]
+max-line-length = 88      # akceptuj linie do 88 znaków (jak black)
+extend-ignore = E203      # ignoruj błąd który black celowo łamie
+exclude = .git,__pycache__,venv,.venv   # nie sprawdzaj tych folderów
