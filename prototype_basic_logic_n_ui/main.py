@@ -19,7 +19,7 @@ def transform_to_conversation_text() -> str:
 OPENAI_MODEL = "gpt-4o-mini"
 
 # USER SETTINGS in sidebar
-st.sidebar.write(f"Ustawienia")
+st.sidebar.write("Ustawienia")
 # for example we can use slider for max tokens used in prompt or temperature of model
 model_tokens = st.sidebar.slider(
     "Maksymalna ilość tokenów", min_value=500, max_value=2500

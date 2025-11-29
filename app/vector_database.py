@@ -3,7 +3,6 @@ import os
 from qdrant_client.models import Distance, VectorParams
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
-from langchain_core.documents import Document
 
 # from langchain_community.embeddings import HuggingFaceEmbeddings
 

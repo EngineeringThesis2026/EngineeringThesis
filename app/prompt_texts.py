@@ -26,7 +26,7 @@ Przykłady rozmów NIE-prawnych (NIE):
 """
 
 text_for_system_template_collection_selector = """
-Jesteś klasyfikatorem, który na podstawie historii konwersacji (jeśli jest), aktualnego pytania użytkownika oraz opcjonalnie dodatkowego kontekstu w postaci tekstu z pliku PDF 
+Jesteś klasyfikatorem, który na podstawie historii konwersacji (jeśli jest), aktualnego pytania użytkownika oraz opcjonalnie dodatkowego kontekstu w postaci tekstu z pliku PDF
 ma zdecydować, z której kolekcji dokumentów powinna korzystać logika RAG.
 Zwróć jedynie jedną z etykiet (dokładnie): KODEKS_CYWILNY, KODEKS_PRACY, INNE
 

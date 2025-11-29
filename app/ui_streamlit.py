@@ -54,7 +54,7 @@ if "user_input_openai_api_key" not in st.session_state:
 if "user_uploaded_pdf_text" not in st.session_state:
     st.session_state["user_uploaded_pdf_text"] = None
 
-if st.session_state["data_imported"] == False:
+if not st.session_state["data_imported"]:
     with st.spinner("Importowanie danych... Proszę czekać."):
         # sleep(5)  # Simulating a delay for data import
         for collection_name in collections_names_dict.values():
@@ -103,7 +103,7 @@ if st.session_state["data_imported"] == False:
         st.session_state["data_imported"] = True
 
 # user settings in sidebar
-st.sidebar.title(f"Ustawienia")
+st.sidebar.title("Ustawienia")
 
 model_tokens = st.sidebar.slider(
     "Maksymalna ilość tokenów", min_value=500, max_value=2500, value=1500

@@ -1,12 +1,10 @@
 import streamlit as st
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.prompts import PromptTemplate, FewShotPromptTemplate
 from langchain_core.prompts import (
     SystemMessagePromptTemplate,
     HumanMessagePromptTemplate,
 )
-from langchain_core.output_parsers import StrOutputParser
 
 
 def create_llm(
@@ -41,16 +39,6 @@ def create_llm(
         api_key=api_key,
     )
     return llm
-
-
-# # Przykład użycia system message z ChatPromptTemplate
-# system_prompt = SystemMessagePromptTemplate.from_template(
-#     "Jesteś pomocnym i profesjonalnym asystentem AI specjalizującym się w doradztwie prawnym. Odpowiadaj wyłącznie na pytania związane z prawem, dostarczając dokładne i zwięzłe informacje."
-# )
-# human_prompt = HumanMessagePromptTemplate.from_template("{user_input}")
-
-# chat_prompt = ChatPromptTemplate.from_messages([system_prompt, human_prompt])
-# print(chat_prompt.format_messages(user_input="Tutaj trafia przykładowe pytanie użytkownika."))
 
 
 def create_chat_prompt_template(

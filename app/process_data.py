@@ -1,6 +1,5 @@
 # Get data path
 from pathlib import Path
-import streamlit as st
 
 # Read data from pdf
 from langchain_community.document_loaders import PyPDFLoader
@@ -14,11 +13,6 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from sentence_transformers import SentenceTransformer
 
 _embedding_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
-
-
-# def get_data_folder_path() -> Path:
-#     data_folder = Path(__file__).parent / "data"
-#     return data_folder
 
 
 def get_data_folder_path(destination_folder: str) -> Path:
