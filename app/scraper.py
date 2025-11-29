@@ -49,7 +49,7 @@ def pobierz_strone(url_wyszukiwania, numer_strony=1):
         return odpowiedz.text
 
     except requests.exceptions.Timeout:
-        print(f"Timeout - strona nie odpowiada")
+        print("Timeout - strona nie odpowiada")
         return None
 
     except Exception as blad:
@@ -109,9 +109,9 @@ def pobierz_pdf(url_orzeczenia, folder_output):
         # Zamień /details/ na /content/
         if "/details/" in url_orzeczenia:
             url_orzeczenia = url_orzeczenia.replace("/details/", "/content/")
-            print(f"Zmieniono na /content/")
+            print("Zmieniono na /content/")
 
-        print(f"Pobieram orzeczenie...")
+        print("Pobieram orzeczenie...")
 
         # Pobierz stronę orzeczenia
         odpowiedz = requests.get(url_orzeczenia, headers=NAGLOWKI, timeout=30)
@@ -127,22 +127,22 @@ def pobierz_pdf(url_orzeczenia, folder_output):
             tag_a = przycisk.find("a", href=True)
             if tag_a:
                 link_do_pdf = urljoin(STRONA_BAZOWA, tag_a["href"])
-                print(f"Znaleziono link PDF")
+                print("Znaleziono link PDF")
 
         # Plan B: szukaj wszędzie
         if not link_do_pdf:
             for link in soup.find_all("a", href=True):
                 if "/content.pdffile/" in link["href"]:
                     link_do_pdf = urljoin(STRONA_BAZOWA, link["href"])
-                    print(f"Znaleziono link PDF (plan B)")
+                    print("Znaleziono link PDF (plan B)")
                     break
 
         if not link_do_pdf:
-            print(f"Nie znaleziono PDF")
+            print("Nie znaleziono PDF")
             return None
 
         # Pobierz PDF
-        print(f"Pobieram PDF...")
+        print("Pobieram PDF...")
         time.sleep(OPOZNIENIE)
 
         odpowiedz_pdf = requests.get(link_do_pdf, headers=NAGLOWKI, timeout=60)
@@ -150,7 +150,7 @@ def pobierz_pdf(url_orzeczenia, folder_output):
 
         # Sprawdź czy to PDF
         if not odpowiedz_pdf.content.startswith(b"%PDF"):
-            print(f"To nie jest PDF!")
+            print("To nie jest PDF!")
             return None
 
         # Wygeneruj nazwę pliku
@@ -238,7 +238,7 @@ def scrapuj(url_wyszukiwania, ile_stron=1, folder_output="app/data/scraped_judgm
 
     # Podsumowanie
     print(f"\n{'=' * 70}")
-    print(f"KONIEC")
+    print("KONIEC")
     print(f"{'=' * 70}")
     print(f"Pobrano PDFów: {licznik_pobranych}")
     print(f"Folder: {folder}")
