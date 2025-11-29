@@ -5,7 +5,7 @@ from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 from langchain_core.documents import Document
 
-from langchain_community.embeddings import HuggingFaceEmbeddings
+# from langchain_community.embeddings import HuggingFaceEmbeddings
 
 from langchain_huggingface import HuggingFaceEmbeddings
 
@@ -13,7 +13,6 @@ embeddings_for_qdrant_vector_store = HuggingFaceEmbeddings(
     model_name="sentence-transformers/all-MiniLM-L6-v2"
 )
 
-import process_data
 
 # Support both Docker and local setups
 _qdrant_url = os.getenv("QDRANT_URL", "http://localhost:6333")
@@ -94,6 +93,7 @@ def upload_to_qdrant(
 #                                     embedding=embeddings_for_qdrant_vector_store,
 #                                     content_payload_key="text",)
 
+
 def get_vector_store(collection_name: str) -> QdrantVectorStore:
     """
     Create QdrantVectorStore lazily (only after collection exists).
@@ -114,6 +114,7 @@ def get_vector_store(collection_name: str) -> QdrantVectorStore:
 #     """
 #     retriever = lch_vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 3})
 #     return retriever
+
 
 def create_retriever(collection_name: str):
     """
