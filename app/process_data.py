@@ -15,8 +15,22 @@ from sentence_transformers import SentenceTransformer
 
 _embedding_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
 
-def get_data_folder_path() -> Path:
-    data_folder = Path(__file__).parent / "data"
+# def get_data_folder_path() -> Path:
+#     data_folder = Path(__file__).parent / "data" 
+#     return data_folder
+
+def get_data_folder_path(destination_folder: str) -> Path:
+    """
+    Get the path to the specified data folder.
+    Args:
+        destination_folder (str): The name of the destination folder inside the 'data' directory.
+    Returns: Path: The path to the specified data folder.
+    """
+    
+    if type(destination_folder) is not str:
+        print("Invalid destination folder type")
+        return None
+    data_folder = Path(__file__).parent / "data" / destination_folder
     return data_folder
 
 
