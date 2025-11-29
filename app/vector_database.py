@@ -3,9 +3,8 @@ import os
 from qdrant_client.models import Distance, VectorParams
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
-from langchain_core.documents import Document
 
-from langchain_community.embeddings import HuggingFaceEmbeddings
+# from langchain_community.embeddings import HuggingFaceEmbeddings
 
 from langchain_huggingface import HuggingFaceEmbeddings
 
@@ -13,11 +12,9 @@ embeddings_for_qdrant_vector_store = HuggingFaceEmbeddings(
     model_name="sentence-transformers/all-MiniLM-L6-v2"
 )
 
-import process_data
 
 # Support both Docker and local setups
 _qdrant_url = os.getenv("QDRANT_URL", "http://localhost:6333")
-_collection_name = "law_data"
 _vector_database_client = QdrantClient(url=_qdrant_url)
 
 # vector_size = len(process_data.embeddings[0]['embedding'])
@@ -96,13 +93,13 @@ def upload_to_qdrant(
 #                                     content_payload_key="text",)
 
 
-def get_vector_store():
+def get_vector_store(collection_name: str) -> QdrantVectorStore:
     """
     Create QdrantVectorStore lazily (only after collection exists).
     """
     return QdrantVectorStore(
         client=_vector_database_client,
-        collection_name=_collection_name,
+        collection_name=collection_name,
         embedding=embeddings_for_qdrant_vector_store,
         content_payload_key="text",
     )
@@ -118,9 +115,9 @@ def get_vector_store():
 #     return retriever
 
 
-def create_retriever():
+def create_retriever(collection_name: str):
     """
     Create a retriever after data is loaded.
     """
-    store = get_vector_store()
+    store = get_vector_store(collection_name)
     return store.as_retriever(search_type="similarity", search_kwargs={"k": 1})
