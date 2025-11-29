@@ -13,7 +13,8 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 # from langchain_openai import OpenAIEmbeddings
 from sentence_transformers import SentenceTransformer
 
-_embedding_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+_embedding_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+
 
 def get_data_folder_path() -> Path:
     data_folder = Path(__file__).parent / "data"
@@ -21,7 +22,7 @@ def get_data_folder_path() -> Path:
 
 
 # Load PDF data from 'data' file:
-def load_data_from_pdf(file_path: Path) ->list:
+def load_data_from_pdf(file_path: Path) -> list:
     """
     Load all PDF files from the specified directory and return a list of Document objects.
     Each Document contains the content of a page and its metadata (source file name, page number, file path).
@@ -37,7 +38,7 @@ def load_data_from_pdf(file_path: Path) ->list:
 
         loader = PyPDFLoader(str(pdf_path))
         pages = loader.load()
-        
+
         for i, page in enumerate(pages):
             doc = Document(
                 page_content=page.page_content,
@@ -45,14 +46,16 @@ def load_data_from_pdf(file_path: Path) ->list:
                     "source": pdf_path.name,
                     "page_number": i + 1,
                     "file_path": str(pdf_path),
-                }
+                },
             )
             documents.append(doc)
-    
-    return documents or None
-    
 
-def split_docks_into_chunks(documents: list,chunk_size: int=1000, chunk_overlap: int=200) ->list:
+    return documents or None
+
+
+def split_docks_into_chunks(
+    documents: list, chunk_size: int = 1000, chunk_overlap: int = 200
+) -> list:
     """
     Split documents into smaller chunks using RecursiveCharacterTextSplitter
     Args:
@@ -64,7 +67,7 @@ def split_docks_into_chunks(documents: list,chunk_size: int=1000, chunk_overlap:
     """
 
     text_splitter = RecursiveCharacterTextSplitter(
-    chunk_size=1000, chunk_overlap=200, add_start_index=True
+        chunk_size=1000, chunk_overlap=200, add_start_index=True
     )
     all_splits = text_splitter.split_documents(documents)
     return all_splits
@@ -75,6 +78,7 @@ def split_docks_into_chunks(documents: list,chunk_size: int=1000, chunk_overlap:
 #     model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
 #     embeddings = model.encode(sentences)
 #     return embeddings
+
 
 def create_embeddings_with_metadata(sentences, embedding_model):
     """
@@ -91,11 +95,13 @@ def create_embeddings_with_metadata(sentences, embedding_model):
 
     embeddings_with_metadata = []
     for emb, sentence in zip(embeddings, sentences):
-        embeddings_with_metadata.append({
-            "embedding": emb,
-            "text": sentence.page_content,
-            "metadata": sentence.metadata
-        })
+        embeddings_with_metadata.append(
+            {
+                "embedding": emb,
+                "text": sentence.page_content,
+                "metadata": sentence.metadata,
+            }
+        )
     return embeddings_with_metadata
 
 
@@ -109,9 +115,3 @@ def create_embeddings_with_metadata(sentences, embedding_model):
 # # CREATING EMBEDDINGS
 # # embeddings = OpenAIEmbeddings(model="text-embedding-3-large", api_key=st.secrets["OPENAI_API_KEY"],)
 # embeddings = create_embeddings_with_metadata(sentences=all_splits, embedding_model=_embedding_model)
-
-
-
-
-
-

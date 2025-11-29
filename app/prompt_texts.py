@@ -24,4 +24,3 @@ Przykłady rozmów NIE-prawnych (NIE):
 - historia, geografia (chyba że historia prawa)
 - rozmowy filozoficzne nie związane z prawem
 """
-

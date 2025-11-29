@@ -14,16 +14,16 @@ STRONA_BAZOWA = "https://orzeczenia.ms.gov.pl"
 
 # Nagłówki HTTP
 NAGLOWKI = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-    'DNT': '1',
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "DNT": "1",
 }
 
 # Opóźnienie między requestami (sekundy)
 OPOZNIENIE = 0.5
 
 
-
 # FUNKCJA 1: Pobieranie strony z wynikami
+
 
 def pobierz_strone(url_wyszukiwania, numer_strony=1):
     """
@@ -32,7 +32,7 @@ def pobierz_strone(url_wyszukiwania, numer_strony=1):
     Zwraca HTML jako tekst lub None jeśli błąd.
     """
     # Zamień numer strony w URL
-    url_bez_numeru = url_wyszukiwania.rsplit('/', 1)[0]
+    url_bez_numeru = url_wyszukiwania.rsplit("/", 1)[0]
     url_pelny = f"{url_bez_numeru}/{numer_strony}"
 
     print(f"Pobieram stronę {numer_strony}: {url_pelny}")
@@ -59,6 +59,7 @@ def pobierz_strone(url_wyszukiwania, numer_strony=1):
 
 # FUNKCJA 2: Wyciąganie linków do orzeczeń
 
+
 def wyciagnij_linki(html):
     """
     Wyciąga linki do orzeczeń z HTML-a.
@@ -72,15 +73,15 @@ def wyciagnij_linki(html):
 
     try:
         # Parsuj HTML
-        soup = BeautifulSoup(html, 'html.parser')
+        soup = BeautifulSoup(html, "html.parser")
         znalezione_linki = []
 
         # Znajdź wszystkie linki
-        for link in soup.find_all('a', href=True):
-            href = link['href']
+        for link in soup.find_all("a", href=True):
+            href = link["href"]
 
             # Tylko linki do orzeczeń
-            if '/details/' in href or '/content/' in href:
+            if "/details/" in href or "/content/" in href:
                 pelny_url = urljoin(STRONA_BAZOWA, href)
 
                 # Unikanie duplikatów
@@ -97,6 +98,7 @@ def wyciagnij_linki(html):
 
 # FUNKCJA 3: Pobieranie pojedynczego PDF
 
+
 def pobierz_pdf(url_orzeczenia, folder_output):
     """
     Pobiera PDF z pojedynczego orzeczenia.
@@ -105,8 +107,8 @@ def pobierz_pdf(url_orzeczenia, folder_output):
     """
     try:
         # Zamień /details/ na /content/
-        if '/details/' in url_orzeczenia:
-            url_orzeczenia = url_orzeczenia.replace('/details/', '/content/')
+        if "/details/" in url_orzeczenia:
+            url_orzeczenia = url_orzeczenia.replace("/details/", "/content/")
             print(f"Zmieniono na /content/")
 
         print(f"Pobieram orzeczenie...")
@@ -116,22 +118,22 @@ def pobierz_pdf(url_orzeczenia, folder_output):
         odpowiedz.raise_for_status()
 
         # Znajdź link do PDF
-        soup = BeautifulSoup(odpowiedz.text, 'html.parser')
+        soup = BeautifulSoup(odpowiedz.text, "html.parser")
         link_do_pdf = None
 
         # Szukaj przycisku pobierania
-        przycisk = soup.find('li', class_='download_btn')
+        przycisk = soup.find("li", class_="download_btn")
         if przycisk:
-            tag_a = przycisk.find('a', href=True)
+            tag_a = przycisk.find("a", href=True)
             if tag_a:
-                link_do_pdf = urljoin(STRONA_BAZOWA, tag_a['href'])
+                link_do_pdf = urljoin(STRONA_BAZOWA, tag_a["href"])
                 print(f"Znaleziono link PDF")
 
         # Plan B: szukaj wszędzie
         if not link_do_pdf:
-            for link in soup.find_all('a', href=True):
-                if '/content.pdffile/' in link['href']:
-                    link_do_pdf = urljoin(STRONA_BAZOWA, link['href'])
+            for link in soup.find_all("a", href=True):
+                if "/content.pdffile/" in link["href"]:
+                    link_do_pdf = urljoin(STRONA_BAZOWA, link["href"])
                     print(f"Znaleziono link PDF (plan B)")
                     break
 
@@ -147,16 +149,16 @@ def pobierz_pdf(url_orzeczenia, folder_output):
         odpowiedz_pdf.raise_for_status()
 
         # Sprawdź czy to PDF
-        if not odpowiedz_pdf.content.startswith(b'%PDF'):
+        if not odpowiedz_pdf.content.startswith(b"%PDF"):
             print(f"To nie jest PDF!")
             return None
 
         # Wygeneruj nazwę pliku
         nazwa_pliku = None
-        if '/content/' in url_orzeczenia:
-            czesci = url_orzeczenia.rstrip('/').split('/')
+        if "/content/" in url_orzeczenia:
+            czesci = url_orzeczenia.rstrip("/").split("/")
             if czesci:
-                id_sprawy = czesci[-1].replace('$N/', '')
+                id_sprawy = czesci[-1].replace("$N/", "")
                 nazwa_pliku = f"{id_sprawy}.pdf"
 
         if not nazwa_pliku:
@@ -165,10 +167,9 @@ def pobierz_pdf(url_orzeczenia, folder_output):
         # Zapisz PDF
         sciezka = Path(folder_output) / nazwa_pliku
 
-        with open(sciezka, 'wb') as plik:
+        with open(sciezka, "wb") as plik:
             plik.write(odpowiedz_pdf.content)
 
-        
         print(f"Zapisano: {nazwa_pliku}")
 
         return str(sciezka)
@@ -179,6 +180,7 @@ def pobierz_pdf(url_orzeczenia, folder_output):
 
 
 # FUNKCJA 4: Główna funkcja scrapingu
+
 
 def scrapuj(url_wyszukiwania, ile_stron=1, folder_output="app/data/scraped_judgments"):
     """
@@ -249,8 +251,4 @@ if __name__ == "__main__":
     # URL wyszukiwania
     URL = "https://orzeczenia.ms.gov.pl/search/advanced/$N/$N/$N/$N/$N/153510/$N/$N/$N/$N/$N/$N/$N/$N/$N/score/descending/1"
 
-    scrapuj(
-        url_wyszukiwania=URL,
-        ile_stron=2,
-        folder_output="app/data/scrape"
-    )
+    scrapuj(url_wyszukiwania=URL, ile_stron=2, folder_output="app/data/scrape")
