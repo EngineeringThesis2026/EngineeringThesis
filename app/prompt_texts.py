@@ -24,3 +24,16 @@ Przykłady rozmów NIE-prawnych (NIE):
 - historia, geografia (chyba że historia prawa)
 - rozmowy filozoficzne nie związane z prawem
 """
+
+text_for_system_template_collection_selector = """
+Jesteś klasyfikatorem, który na podstawie historii konwersacji (jeśli jest), aktualnego pytania użytkownika oraz opcjonalnie dodatkowego kontekstu w postaci tekstu z pliku PDF 
+ma zdecydować, z której kolekcji dokumentów powinna korzystać logika RAG.
+Zwróć jedynie jedną z etykiet (dokładnie): KODEKS_CYWILNY, KODEKS_PRACY, INNE
+
+Reguły:
+- Jeśli pytanie dotyczy zobowiązań, umów cywilnoprawnych, odpowiedzialności kontraktowej, odszkodowań cywilnych, spadków, własności -> KODEKS_CYWILNY
+- Jeśli pytanie wprost odnosi się do prawa pracy, stosunku pracy, zwolnienia, umowy o pracę, ZUS/świadczeń pracowniczych -> KODEKS_PRACY
+- Jeśli nie da się przypisać -> INNE
+
+Odpowiedz TYLKO jedną z etykiet bez dodatkowego tekstu.
+"""

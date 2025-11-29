@@ -17,7 +17,6 @@ import process_data
 
 # Support both Docker and local setups
 _qdrant_url = os.getenv("QDRANT_URL", "http://localhost:6333")
-_collection_name = "law_data"
 _vector_database_client = QdrantClient(url=_qdrant_url)
 
 # vector_size = len(process_data.embeddings[0]['embedding'])
@@ -95,14 +94,13 @@ def upload_to_qdrant(
 #                                     embedding=embeddings_for_qdrant_vector_store,
 #                                     content_payload_key="text",)
 
-
-def get_vector_store():
+def get_vector_store(collection_name: str) -> QdrantVectorStore:
     """
     Create QdrantVectorStore lazily (only after collection exists).
     """
     return QdrantVectorStore(
         client=_vector_database_client,
-        collection_name=_collection_name,
+        collection_name=collection_name,
         embedding=embeddings_for_qdrant_vector_store,
         content_payload_key="text",
     )
@@ -117,10 +115,9 @@ def get_vector_store():
 #     retriever = lch_vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 3})
 #     return retriever
 
-
-def create_retriever():
+def create_retriever(collection_name: str):
     """
     Create a retriever after data is loaded.
     """
-    store = get_vector_store()
+    store = get_vector_store(collection_name)
     return store.as_retriever(search_type="similarity", search_kwargs={"k": 1})
