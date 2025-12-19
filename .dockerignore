@@ -44,7 +44,7 @@ environment.yml
 logs/
 
 # Data files (will be mounted as volume)
-app/data/*.pdf
+app/data/
 
 # Model files
 *.pkl
@@ -61,9 +61,6 @@ docker-compose.yml
 
 # Documentation
 README.md
-
-# Prototype
-prototype_basic_logic_n_ui/
 
 # OS
 Thumbs.db

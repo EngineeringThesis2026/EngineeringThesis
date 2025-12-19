@@ -62,8 +62,6 @@ logs/
 *.csv
 *.json
 *.xml
-data/raw/
-data/processed/
 
 # Model files
 *.pkl
@@ -77,11 +75,8 @@ models/
 Thumbs.db
 .DS_Store
 
-# Environment YML files
-environment.yml
-
 # PyTest
 .pytest_cache/
 
 # Data
-app/data/rullings/
+app/data/rulings/
