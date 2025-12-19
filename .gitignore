@@ -79,6 +79,6 @@ Thumbs.db
 .pytest_cache/
 
 # Data
-app/data/rulings/
-app/data/civil_code/
-app/data/labor_code/
+app/data/rulings/*.pdf
+app/data/civil_code/*.pdf
+app/data/labor_code/*.pdf
