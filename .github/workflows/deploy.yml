@@ -1,0 +1,59 @@
+name: Deploy to GCP VM
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Pozwala na ręczne uruchomienie
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Deploy to VM
+        run: |
+          gcloud compute ssh ${{ secrets.VM_NAME }} \
+            --zone=${{ secrets.GCP_ZONE }} \
+            --command='
+              cd ~/legal-app && \
+              git pull origin main && \
+              docker compose down && \
+              docker compose up -d --build && \
+              docker compose ps
+            '
+
+      - name: Health check
+        run: |
+          # Pobierz IP VM
+          VM_IP=$(gcloud compute instances describe ${{ secrets.VM_NAME }} \
+            --zone=${{ secrets.GCP_ZONE }} \
+            --format="get(networkInterfaces[0].accessConfigs[0].natIP)")
+
+          echo "Checking health at http://$VM_IP:8501"
+
+          # Poczekaj na start aplikacji (max 60 sekund)
+          for i in {1..12}; do
+            if curl -s --max-time 5 "http://$VM_IP:8501" > /dev/null; then
+              echo "✅ Application is running!"
+              exit 0
+            fi
+            echo "Waiting for app to start... ($i/12)"
+            sleep 5
+          done
+
+          echo "⚠️ Health check timeout - check logs on VM"
+          exit 1
