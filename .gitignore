@@ -82,3 +82,6 @@ environment.yml
 
 # PyTest
 .pytest_cache/
+
+# Data
+app/data/
