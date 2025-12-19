@@ -179,7 +179,23 @@ def download_pdf(ruling_url, output_folder):
         return None
 
 
-# FUNCTION 4: Main scraping function
+# FUNCTION 4: Download legal codes from ISAP
+
+
+def download_codes():
+    """Downloads Kodeks cywilny and Kodeks pracy from ISAP."""
+    Path("app/data/civil_code").mkdir(parents=True, exist_ok=True)
+    print("Downloading kodeks_cywilny.pdf...")
+    r = requests.get("https://isap.sejm.gov.pl/isap.nsf/download.xsp/WDU19640160093/U/D19640093Lj.pdf", timeout=60)
+    Path("app/data/civil_code/kodeks_cywilny.pdf").write_bytes(r.content)
+
+    Path("app/data/labor_code").mkdir(parents=True, exist_ok=True)
+    print("Downloading kodeks_pracy.pdf...")
+    r = requests.get("https://isap.sejm.gov.pl/isap.nsf/download.xsp/WDU19740240141/U/D19740141Lj.pdf", timeout=60)
+    Path("app/data/labor_code/kodeks_pracy.pdf").write_bytes(r.content)
+
+
+# FUNCTION 5: Main scraping function
 
 
 def scrape(search_url, page_count=1, output_folder="app/data/scraped_judgments"):
@@ -253,6 +269,9 @@ if __name__ == "__main__":
     # Default values
     URL = "https://orzeczenia.ms.gov.pl/search/advanced/$N/$N/$N/$N/$N/153510/$N/$N/$N/$N/$N/$N/$N/$N/$N/score/descending/1"
     OUTPUT_FOLDER = "app/data/rulings"
+
+    # Download legal codes first
+    download_codes()
 
     # Default: 10 pages
     pages = int(sys.argv[1]) if len(sys.argv) > 1 else 10
