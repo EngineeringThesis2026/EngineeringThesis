@@ -1,5 +1,5 @@
 """
-Scraper pobierajacy orzeczenia pdf ze strony orzeczenia.ms.gov.pl.
+Scraper that downloads court ruling PDFs from orzeczenia.ms.gov.pl website.
 """
 
 import requests
@@ -9,246 +9,246 @@ from pathlib import Path
 from urllib.parse import urljoin
 
 
-# KONFIGURACJA
-STRONA_BAZOWA = "https://orzeczenia.ms.gov.pl"
+# CONFIGURATION
+BASE_URL = "https://orzeczenia.ms.gov.pl"
 
-# Nagłówki HTTP
-NAGLOWKI = {
+# HTTP Headers
+HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
     "DNT": "1",
 }
 
-# Opóźnienie między requestami (sekundy)
-OPOZNIENIE = 0.5
+# Delay between requests (seconds)
+DELAY = 0.25
 
 
-# FUNKCJA 1: Pobieranie strony z wynikami
+# FUNCTION 1: Getting page with results
 
 
-def pobierz_strone(url_wyszukiwania, numer_strony=1):
+def get_page(search_url, page_number=1):
     """
-    Pobiera HTML strony z wynikami wyszukiwania.
+    Gets HTML of search results page.
 
-    Zwraca HTML jako tekst lub None jeśli błąd.
+    Returns HTML as text or None if error.
     """
-    # Zamień numer strony w URL
-    url_bez_numeru = url_wyszukiwania.rsplit("/", 1)[0]
-    url_pelny = f"{url_bez_numeru}/{numer_strony}"
+    # Change page number in URL
+    url_without_number = search_url.rsplit("/", 1)[0]
+    full_url = f"{url_without_number}/{page_number}"
 
-    print(f"Pobieram stronę {numer_strony}: {url_pelny}")
+    print(f"Getting page {page_number}: {full_url}")
 
     try:
-        # Wyślij GET
-        odpowiedz = requests.get(url_pelny, headers=NAGLOWKI, timeout=30)
-        odpowiedz.raise_for_status()
+        # Send GET request
+        response = requests.get(full_url, headers=HEADERS, timeout=30)
+        response.raise_for_status()
 
-        # Poczekaj
-        time.sleep(OPOZNIENIE)
+        # Wait
+        time.sleep(DELAY)
 
-        print(f"Pobrano ({len(odpowiedz.text)} znaków)")
-        return odpowiedz.text
+        print(f"Got page ({len(response.text)} characters)")
+        return response.text
 
     except requests.exceptions.Timeout:
-        print("Timeout - strona nie odpowiada")
+        print("Timeout - page is not responding")
         return None
 
-    except Exception as blad:
-        print(f"Błąd: {blad}")
+    except Exception as error:
+        print(f"Error: {error}")
         return None
 
 
-# FUNKCJA 2: Wyciąganie linków do orzeczeń
+# FUNCTION 2: Getting links to rulings
 
 
-def wyciagnij_linki(html):
+def get_links(html):
     """
-    Wyciąga linki do orzeczeń z HTML-a.
+    Gets links to rulings from HTML.
 
-    Zwraca listę URLi.
+    Returns list of URLs.
     """
     if not html:
         return []
 
-    print("Szukam linków do orzeczeń...")
+    print("Looking for links to rulings...")
 
     try:
-        # Parsuj HTML
+        # Parse HTML
         soup = BeautifulSoup(html, "html.parser")
-        znalezione_linki = []
+        found_links = []
 
-        # Znajdź wszystkie linki
+        # Find all links
         for link in soup.find_all("a", href=True):
             href = link["href"]
 
-            # Tylko linki do orzeczeń
+            # Only links to rulings
             if "/details/" in href or "/content/" in href:
-                pelny_url = urljoin(STRONA_BAZOWA, href)
+                full_url = urljoin(BASE_URL, href)
 
-                # Unikanie duplikatów
-                if pelny_url not in znalezione_linki:
-                    znalezione_linki.append(pelny_url)
+                # Avoid duplicates
+                if full_url not in found_links:
+                    found_links.append(full_url)
 
-        print(f"Znaleziono {len(znalezione_linki)} linków")
-        return znalezione_linki
+        print(f"Found {len(found_links)} links")
+        return found_links
 
-    except Exception as blad:
-        print(f"Błąd parsowania: {blad}")
+    except Exception as error:
+        print(f"Parsing error: {error}")
         return []
 
 
-# FUNKCJA 3: Pobieranie pojedynczego PDF
+# FUNCTION 3: Downloading single PDF
 
 
-def pobierz_pdf(url_orzeczenia, folder_output):
+def download_pdf(ruling_url, output_folder):
     """
-    Pobiera PDF z pojedynczego orzeczenia.
+    Downloads PDF from single ruling.
 
-    Zwraca ścieżkę do pliku lub None jeśli błąd.
+    Returns file path or None if error.
     """
     try:
-        # Zamień /details/ na /content/
-        if "/details/" in url_orzeczenia:
-            url_orzeczenia = url_orzeczenia.replace("/details/", "/content/")
-            print("Zmieniono na /content/")
+        # Change /details/ to /content/
+        if "/details/" in ruling_url:
+            ruling_url = ruling_url.replace("/details/", "/content/")
+            print("Changed to /content/")
 
-        print("Pobieram orzeczenie...")
+        print("Getting ruling...")
 
-        # Pobierz stronę orzeczenia
-        odpowiedz = requests.get(url_orzeczenia, headers=NAGLOWKI, timeout=30)
-        odpowiedz.raise_for_status()
+        # Get ruling page
+        response = requests.get(ruling_url, headers=HEADERS, timeout=30)
+        response.raise_for_status()
 
-        # Znajdź link do PDF
-        soup = BeautifulSoup(odpowiedz.text, "html.parser")
-        link_do_pdf = None
+        # Find PDF link
+        soup = BeautifulSoup(response.text, "html.parser")
+        pdf_link = None
 
-        # Szukaj przycisku pobierania
-        przycisk = soup.find("li", class_="download_btn")
-        if przycisk:
-            tag_a = przycisk.find("a", href=True)
-            if tag_a:
-                link_do_pdf = urljoin(STRONA_BAZOWA, tag_a["href"])
-                print("Znaleziono link PDF")
+        # Look for download button
+        button = soup.find("li", class_="download_btn")
+        if button:
+            a_tag = button.find("a", href=True)
+            if a_tag:
+                pdf_link = urljoin(BASE_URL, a_tag["href"])
+                print("Found PDF link")
 
-        # Plan B: szukaj wszędzie
-        if not link_do_pdf:
+        # Plan B: search everywhere
+        if not pdf_link:
             for link in soup.find_all("a", href=True):
                 if "/content.pdffile/" in link["href"]:
-                    link_do_pdf = urljoin(STRONA_BAZOWA, link["href"])
-                    print("Znaleziono link PDF (plan B)")
+                    pdf_link = urljoin(BASE_URL, link["href"])
+                    print("Found PDF link (plan B)")
                     break
 
-        if not link_do_pdf:
-            print("Nie znaleziono PDF")
+        if not pdf_link:
+            print("PDF not found")
             return None
 
-        # Pobierz PDF
-        print("Pobieram PDF...")
-        time.sleep(OPOZNIENIE)
+        # Download PDF
+        print("Downloading PDF...")
+        time.sleep(DELAY)
 
-        odpowiedz_pdf = requests.get(link_do_pdf, headers=NAGLOWKI, timeout=60)
-        odpowiedz_pdf.raise_for_status()
+        pdf_response = requests.get(pdf_link, headers=HEADERS, timeout=60)
+        pdf_response.raise_for_status()
 
-        # Sprawdź czy to PDF
-        if not odpowiedz_pdf.content.startswith(b"%PDF"):
-            print("To nie jest PDF!")
+        # Check if it is PDF
+        if not pdf_response.content.startswith(b"%PDF"):
+            print("This is not a PDF!")
             return None
 
-        # Wygeneruj nazwę pliku
-        nazwa_pliku = None
-        if "/content/" in url_orzeczenia:
-            czesci = url_orzeczenia.rstrip("/").split("/")
-            if czesci:
-                id_sprawy = czesci[-1].replace("$N/", "")
-                nazwa_pliku = f"{id_sprawy}.pdf"
+        # Create file name
+        file_name = None
+        if "/content/" in ruling_url:
+            parts = ruling_url.rstrip("/").split("/")
+            if parts:
+                case_id = parts[-1].replace("$N/", "")
+                file_name = f"{case_id}.pdf"
 
-        if not nazwa_pliku:
-            nazwa_pliku = f"orzeczenie_{int(time.time())}.pdf"
+        if not file_name:
+            file_name = f"ruling_{int(time.time())}.pdf"
 
-        # Zapisz PDF
-        sciezka = Path(folder_output) / nazwa_pliku
+        # Save PDF
+        file_path = Path(output_folder) / file_name
 
-        with open(sciezka, "wb") as plik:
-            plik.write(odpowiedz_pdf.content)
+        with open(file_path, "wb") as file:
+            file.write(pdf_response.content)
 
-        print(f"Zapisano: {nazwa_pliku}")
+        print(f"Saved: {file_name}")
 
-        return str(sciezka)
+        return str(file_path)
 
-    except Exception as blad:
-        print(f"Błąd: {blad}")
+    except Exception as error:
+        print(f"Error: {error}")
         return None
 
 
-# FUNKCJA 4: Główna funkcja scrapingu
+# FUNCTION 4: Main scraping function
 
 
-def scrapuj(url_wyszukiwania, ile_stron=1, folder_output="app/data/scraped_judgments"):
+def scrape(search_url, page_count=1, output_folder="app/data/scraped_judgments"):
     """
-    GŁÓWNA FUNKCJA - Pobiera PDFy z wielu stron.
+    MAIN FUNCTION - Downloads PDFs from many pages.
 
-    Zwraca liczbę pobranych PDFów.
+    Returns number of downloaded PDFs.
     """
     print("=" * 70)
-    print("START SCRAPINGU")
+    print("START SCRAPING")
     print("=" * 70)
 
-    # Stwórz folder
-    folder = Path(folder_output)
+    # Create folder
+    folder = Path(output_folder)
     try:
         folder.mkdir(parents=True, exist_ok=True)
         print(f"Folder: {folder}\n")
-    except Exception as blad:
-        print(f"Nie można stworzyć folderu: {blad}")
+    except Exception as error:
+        print(f"Cannot create folder: {error}")
         return 0
 
-    licznik_pobranych = 0
+    downloaded_count = 0
 
-    # Pętla przez strony
-    for numer_strony in range(1, ile_stron + 1):
+    # Loop through pages
+    for page_number in range(1, page_count + 1):
         print(f"\n{'=' * 70}")
-        print(f"STRONA {numer_strony}/{ile_stron}")
+        print(f"PAGE {page_number}/{page_count}")
         print(f"{'=' * 70}")
 
-        # 1. Pobierz stronę
-        html = pobierz_strone(url_wyszukiwania, numer_strony)
+        # 1. Get page
+        html = get_page(search_url, page_number)
 
         if not html:
-            print(f"Pomijam stronę {numer_strony}")
+            print(f"Skipping page {page_number}")
             continue
 
-        # 2. Wyciągnij linki
-        linki = wyciagnij_linki(html)
+        # 2. Get links
+        links = get_links(html)
 
-        if not linki:
-            print(f"Brak linków na stronie {numer_strony}")
+        if not links:
+            print(f"No links on page {page_number}")
             continue
 
-        # 3. Pobierz PDFy
-        for i, link in enumerate(linki, 1):
-            print(f"\n   Orzeczenie {i}/{len(linki)}")
+        # 3. Download PDFs
+        for i, link in enumerate(links, 1):
+            print(f"\n   Ruling {i}/{len(links)}")
 
-            sciezka = pobierz_pdf(link, folder_output)
+            file_path = download_pdf(link, output_folder)
 
-            if sciezka:
-                licznik_pobranych += 1
+            if file_path:
+                downloaded_count += 1
 
-            # Opóźnienie
-            if i < len(linki):
-                time.sleep(OPOZNIENIE)
+            # Delay
+            if i < len(links):
+                time.sleep(DELAY)
 
-    # Podsumowanie
+    # Summary
     print(f"\n{'=' * 70}")
-    print("KONIEC")
+    print("END")
     print(f"{'=' * 70}")
-    print(f"Pobrano PDFów: {licznik_pobranych}")
+    print(f"Downloaded PDFs: {downloaded_count}")
     print(f"Folder: {folder}")
     print(f"{'=' * 70}\n")
 
-    return licznik_pobranych
+    return downloaded_count
 
 
 if __name__ == "__main__":
-    # URL wyszukiwania
+    # Search URL
     URL = "https://orzeczenia.ms.gov.pl/search/advanced/$N/$N/$N/$N/$N/153510/$N/$N/$N/$N/$N/$N/$N/$N/$N/score/descending/1"
 
-    scrapuj(url_wyszukiwania=URL, ile_stron=2, folder_output="app/data/scrape")
+    scrape(search_url=URL, page_count=5, output_folder="app/data/rulings")
