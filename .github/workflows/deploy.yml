@@ -27,7 +27,7 @@ jobs:
       - name: Copy code to VM
         run: |
           gcloud compute scp --recurse --zone=${{ secrets.GCP_ZONE }} \
-            ./* ${{ secrets.VM_NAME }}:~/legal-app/
+            ./* .streamlit ${{ secrets.VM_NAME }}:~/legal-app/
 
       - name: Deploy to VM
         run: |
