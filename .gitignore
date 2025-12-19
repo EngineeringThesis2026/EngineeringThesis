@@ -84,4 +84,4 @@ environment.yml
 .pytest_cache/
 
 # Data
-app/data/
+app/data/rullings/
