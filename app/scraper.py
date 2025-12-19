@@ -248,7 +248,13 @@ def scrape(search_url, page_count=1, output_folder="app/data/scraped_judgments")
 
 
 if __name__ == "__main__":
-    # Search URL
-    URL = "https://orzeczenia.ms.gov.pl/search/advanced/$N/$N/$N/$N/$N/153510/$N/$N/$N/$N/$N/$N/$N/$N/$N/score/descending/1"
+    import sys
 
-    scrape(search_url=URL, page_count=5, output_folder="app/data/rulings")
+    # Default values
+    URL = "https://orzeczenia.ms.gov.pl/search/advanced/$N/$N/$N/$N/$N/153510/$N/$N/$N/$N/$N/$N/$N/$N/$N/score/descending/1"
+    OUTPUT_FOLDER = "app/data/rulings"
+
+    # Default: 10 pages
+    pages = int(sys.argv[1]) if len(sys.argv) > 1 else 10
+
+    scrape(search_url=URL, page_count=pages, output_folder=OUTPUT_FOLDER)
