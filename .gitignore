@@ -80,3 +80,5 @@ Thumbs.db
 
 # Data
 app/data/rulings/
+app/data/civil_code/
+app/data/labor_code/
