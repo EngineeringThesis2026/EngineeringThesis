@@ -24,16 +24,17 @@ jobs:
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
+      - name: Copy code to VM
+        run: |
+          gcloud compute scp --recurse --zone=${{ secrets.GCP_ZONE }} \
+            ./* ${{ secrets.VM_NAME }}:~/legal-app/
+
       - name: Deploy to VM
         run: |
           gcloud compute ssh ${{ secrets.VM_NAME }} \
             --zone=${{ secrets.GCP_ZONE }} \
             --command='
-              if [ ! -d ~/legal-app ]; then
-                git clone https://github.com/${{ github.repository }}.git ~/legal-app
-              fi
               cd ~/legal-app && \
-              git pull origin main && \
               docker compose down && \
               docker compose up -d --build && \
               docker compose ps
