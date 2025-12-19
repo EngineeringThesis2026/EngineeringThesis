@@ -29,6 +29,9 @@ jobs:
           gcloud compute ssh ${{ secrets.VM_NAME }} \
             --zone=${{ secrets.GCP_ZONE }} \
             --command='
+              if [ ! -d ~/legal-app ]; then
+                git clone https://github.com/${{ github.repository }}.git ~/legal-app
+              fi
               cd ~/legal-app && \
               git pull origin main && \
               docker compose down && \
