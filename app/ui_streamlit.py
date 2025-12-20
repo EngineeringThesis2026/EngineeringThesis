@@ -58,6 +58,13 @@ if not st.session_state["data_imported"]:
     with st.spinner("Importowanie danych... Proszę czekać."):
         # sleep(5)  # Simulating a delay for data import
         for collection_name in collections_names_dict.values():
+            # Check if collection already has data - if true ---> skip import
+            if vector_database.collection_has_data(
+                vector_database._vector_database_client, collection_name
+            ):
+                print(f"Collection '{collection_name}' already has data - skipping")
+                continue
+
             data_folder_path = process_data.get_data_folder_path(collection_name)
 
             all_data_from_pdfs = process_data.load_data_from_pdf(

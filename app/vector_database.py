@@ -51,6 +51,14 @@ def create_collection_if_not_exists(
         )
 
 
+def collection_has_data(client, name):
+    """Check if collection exists and has points."""
+    if not client.collection_exists(name):
+        return False
+    info = client.get_collection(name)
+    return info.points_count > 0
+
+
 def create_points_from_embeddings(embeddings: list) -> list:
     """
     Create formatted points for Qdrant from embeddings with metadata.
