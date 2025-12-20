@@ -1,4 +1,5 @@
 """Copy secrets.toml.example to secrets.toml if it does not exist."""
+
 from pathlib import Path
 
 SOURCE = Path(".streamlit/secrets.toml.example")

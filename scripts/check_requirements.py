@@ -1,4 +1,5 @@
 """Check if required tools are installed."""
+
 import os
 import sys
 

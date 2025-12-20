@@ -1,4 +1,5 @@
 """Wait for services to start and open browser."""
+
 import time
 import webbrowser
 
