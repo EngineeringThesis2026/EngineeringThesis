@@ -19,7 +19,7 @@ HEADERS = {
 }
 
 # Delay between requests (seconds)
-DELAY = 0.25
+DELAY = 0.5
 
 
 # FUNCTION 1: Getting page with results
@@ -186,12 +186,18 @@ def download_codes():
     """Downloads Kodeks cywilny and Kodeks pracy from ISAP."""
     Path("app/data/civil_code").mkdir(parents=True, exist_ok=True)
     print("Downloading kodeks_cywilny.pdf...")
-    r = requests.get("https://isap.sejm.gov.pl/isap.nsf/download.xsp/WDU19640160093/U/D19640093Lj.pdf", timeout=60)
+    r = requests.get(
+        "https://isap.sejm.gov.pl/isap.nsf/download.xsp/WDU19640160093/U/D19640093Lj.pdf",
+        timeout=60,
+    )
     Path("app/data/civil_code/kodeks_cywilny.pdf").write_bytes(r.content)
 
     Path("app/data/labor_code").mkdir(parents=True, exist_ok=True)
     print("Downloading kodeks_pracy.pdf...")
-    r = requests.get("https://isap.sejm.gov.pl/isap.nsf/download.xsp/WDU19740240141/U/D19740141Lj.pdf", timeout=60)
+    r = requests.get(
+        "https://isap.sejm.gov.pl/isap.nsf/download.xsp/WDU19740240141/U/D19740141Lj.pdf",
+        timeout=60,
+    )
     Path("app/data/labor_code/kodeks_pracy.pdf").write_bytes(r.content)
 
 
