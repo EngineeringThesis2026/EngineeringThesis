@@ -1,7 +1,7 @@
 import streamlit as st
 import datetime
-import llm_model
-import vector_database
+from llm_model import LLMModel
+from vector_database import QdrantVectorDatabase
 import process_data
 import prompt_texts
 import upload_pdf_file
@@ -54,14 +54,20 @@ if "user_input_openai_api_key" not in st.session_state:
 if "user_uploaded_pdf_text" not in st.session_state:
     st.session_state["user_uploaded_pdf_text"] = None
 
+# Creating object for LLM
+llm_model_instance = LLMModel(api_key=st.session_state["user_input_openai_api_key"])
+# Creating object for Vector Database (store in session_state)
+if "vector_database" not in st.session_state:
+    st.session_state["vector_database"] = QdrantVectorDatabase()
+
+vector_database = st.session_state["vector_database"]
+
 if not st.session_state["data_imported"]:
     with st.spinner("Importowanie danych... Proszę czekać."):
         # sleep(5)  # Simulating a delay for data import
         for collection_name in collections_names_dict.values():
             # Check if collection already has data - if true ---> skip import
-            if vector_database.collection_has_data(
-                vector_database._vector_database_client, collection_name
-            ):
+            if vector_database.collection_has_data(collection_name):
                 print(f"Collection '{collection_name}' already has data - skipping")
                 continue
 
@@ -93,7 +99,6 @@ if not st.session_state["data_imported"]:
             vector_size = len(embeddings[0]["embedding"])
 
             vector_database.create_collection_if_not_exists(
-                vector_database_client=vector_database._vector_database_client,
                 collection_name=collection_name,
                 vector_size=vector_size,
             )
@@ -102,7 +107,6 @@ if not st.session_state["data_imported"]:
                 embeddings=embeddings
             )
             vector_database.upload_to_qdrant(
-                vector_database_client=vector_database._vector_database_client,
                 collection_name=collection_name,
                 points=points,
             )
@@ -155,19 +159,14 @@ if not api_key_available:
 
 if api_key_available:
     # Create LLM instance for question classification
-    llm_question_classifier = llm_model.create_llm(
-        api_key=api_key_available,
-    )
+    llm_question_classifier = llm_model_instance.create_llm()
     # Create main LLM instance
-    llm = llm_model.create_llm(
-        api_key=api_key_available,
+    llm = llm_model_instance.create_llm(
         temperature=model_temperature / 100,
         max_tokens=model_tokens,
     )
     # Create LLM instance for choosing collection
-    llm_collection_selector = llm_model.create_llm(
-        api_key=api_key_available,
-    )
+    llm_collection_selector = llm_model_instance.create_llm()
     st.sidebar.success("Połączenie z modelem LLM.")
 
 if st.session_state["data_imported"]:
@@ -176,19 +175,19 @@ if st.session_state["data_imported"]:
 # st.sidebar.write(f"llm temp: {llm.temperature}, llm max tokens: {llm.max_tokens}")  # For debugging
 
 # Chat Prompt Template for question classification
-question_classification_prompt = llm_model.create_chat_prompt_template(
+question_classification_prompt = LLMModel.create_chat_prompt_template(
     system_template=prompt_texts.text_for_system_template_question_classification_prompt,
     human_template="Historia konwersacji: {history}\nPytanie użytkownika: {question}\n Kontekst dodany przez użytkownika: {user_uploaded_pdf_text}",
 )
 
 # Creating Chat Prompt Template for main LLM functionality with RAG
-prompt_template = llm_model.create_chat_prompt_template(
+prompt_template = LLMModel.create_chat_prompt_template(
     system_template="Jesteś pomocnym i profesjonalnym asystentem AI specjalizującym się w doradztwie prawnym. Odpowiadaj wyłącznie na pytania związane z prawem, dostarczając dokładne i zwięzłe informacje. Na wiadomość uytkownika z podziękowaniem odpowiadaj miło wyrażając chęć dalszej pomocy.",
     human_template="Historia konwersacji: {history}\nPytanie użytkownika: {question}\n\nKontekst z bazy danych:\n{context}\n Kontekst dodany przez użytkownika: {user_uploaded_pdf_text}",
 )
 
 # Creating Chat Prompt Template for collection selection
-collection_selection_prompt = llm_model.create_chat_prompt_template(
+collection_selection_prompt = LLMModel.create_chat_prompt_template(
     system_template=prompt_texts.text_for_system_template_collection_selector,
     human_template="Historia konwersacji: {history}\nPytanie użytkownika: {question}\n Kontekst dodany przez użytkownika: {user_uploaded_pdf_text}",
 )
