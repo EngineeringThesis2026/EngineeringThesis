@@ -29,12 +29,14 @@ jobs:
           gcloud compute scp --recurse --zone=${{ secrets.GCP_ZONE }} \
             ./* .streamlit ${{ secrets.VM_NAME }}:~/legal-app/
 
-      - name: Deploy to VM
+      - name: Run scraper and deploy
         run: |
           gcloud compute ssh ${{ secrets.VM_NAME }} \
             --zone=${{ secrets.GCP_ZONE }} \
             --command='
               cd ~/legal-app && \
+              pip3 install --user -q requests beautifulsoup4 && \
+              python3 app/scraper.py 10 && \
               sudo docker compose down && \
               sudo docker compose up -d --build && \
               sudo docker compose ps
