@@ -58,7 +58,7 @@ if "user_uploaded_pdf_text" not in st.session_state:
 if "disclaimer_accepted" not in st.session_state:
     st.session_state["disclaimer_accepted"] = False
 
-# Panel disclaimera AI - zgodność z Art. 50 AI Act
+# AI disclaimer panel - EU AI Act Art. 50 compliance
 if not st.session_state["disclaimer_accepted"]:
     st.header("INFORMACJA O SYSTEMIE AI")
     st.markdown(
@@ -76,7 +76,9 @@ if not st.session_state["disclaimer_accepted"]:
         - System może generować **niepełne lub nieaktualne** informacje
         """
     )
-    st.caption("System zgodny z EU AI Act (Art. 50) | Klasyfikacja: ograniczone ryzyko (limited-risk)")
+    st.caption(
+        "System zgodny z EU AI Act (Art. 50) | Klasyfikacja: ograniczone ryzyko (limited-risk)"
+    )
 
     if st.button("Rozumiem i akceptuję warunki", use_container_width=True):
         st.session_state["disclaimer_accepted"] = True
@@ -147,7 +149,9 @@ st.sidebar.title("Ustawienia")
 
 model_tokens = st.sidebar.slider(
     "Maksymalna ilość tokenów",
-    min_value=500, max_value=2500, value=1500,
+    min_value=500,
+    max_value=2500,
+    value=1500,
     help="Tokeny to jednostki tekstu (słowa lub ich części). Wyższa wartość pozwala na dłuższe odpowiedzi, ale zwiększa czas generowania i koszt.",
 )
 
@@ -190,7 +194,7 @@ if not api_key_available:
     user_input_key = st.text_input("Wpisz swój klucz API OpenAI:", type="password")
     if user_input_key:
         st.session_state["user_input_openai_api_key"] = user_input_key
-        api_key_available = user_input_key  # aktualizacja dostępnego klucza
+        api_key_available = user_input_key  # update available key
 
 if api_key_available:
     # Create LLM instance for question classification
@@ -207,12 +211,10 @@ if api_key_available:
 if st.session_state["data_imported"]:
     st.sidebar.success("Dostęp do danych prawnych jest gotowy.")
 
-# Informacje o systemie - zgodność z Art. 50 AI Act
+# System information - EU AI Act Art. 50 compliance
 st.sidebar.markdown("---")
 st.sidebar.markdown("### Informacje o systemie")
-st.sidebar.markdown(
-    f"**Baza wiedzy aktualizowana:** {datetime.date.today()}"
-)
+st.sidebar.markdown(f"**Baza wiedzy aktualizowana:** {datetime.date.today()}")
 st.sidebar.markdown(
     """
     **Źródła danych:**
@@ -302,7 +304,7 @@ def rag_chain_fn(
         st.write(messages)  # For debugging
         return llm.invoke(messages)
     else:
-        # Check witch data collection to use based on user choice
+        # Check which data collection to use based on user choice
         if chosen_collection_r_button == "Kodeks cywilny":
             retriever = civil_code_retriever
 
@@ -365,7 +367,7 @@ def rag_chain_fn(
                 st.write(
                     """Model wykrył ze tematem rozmowy jest inna kategoria prawa niz prowao cywilne lub pracy.
                             W tym wypadku model dokonuje odpowiedzi bez dodatkowej bazy wiedzy."""
-                )  # TODO: CHANGE NEDED ->
+                )  # TODO: CHANGE NEEDED ->
                 messages = prompt_template.format_messages(
                     question=question,
                     context="brak kontekstu",
@@ -399,7 +401,7 @@ if "messages" not in st.session_state:
 for msg in st.session_state["messages"]:
     with st.chat_message(msg["role"]):
         st.write(msg["content"])
-        # Stopka przy odpowiedziach asystenta - zgodność z Art. 50 AI Act
+        # Footer for assistant responses - EU AI Act Art. 50 compliance
         if msg["role"] == "assistant":
             st.caption("*Wygenerowano przez AI - Nie stanowi porady prawnej*")
 
@@ -432,7 +434,7 @@ if user_input:
         )
         with st.chat_message("assistant"):
             st.write(response.content)
-            # Stopka przy odpowiedziach asystenta - zgodność z Art. 50 AI Act
+            # Footer for assistant responses - EU AI Act Art. 50 compliance
             st.caption("*Wygenerowano przez AI - Nie stanowi porady prawnej*")
 
 
