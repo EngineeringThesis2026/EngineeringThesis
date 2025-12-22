@@ -34,10 +34,11 @@ def transform_to_conversation_text() -> str:
 
 # Setting up the Streamlit page configuration
 st.set_page_config(
-    page_title="Interaktywny system doradczy do konsultacji prawnych oparty na sztucznej inteligencji"
+    page_title="Interaktywny system doradczy do konsultacji prawnych oparty na sztucznej inteligencji",
+    page_icon="app/icon.png",
 )
 
-st.title("Konsultacje prawne AI.")
+st.title("Asystent informacji prawnej")
 
 # Checking the time when the conversation starts
 if "conversation_data" not in st.session_state:
@@ -53,6 +54,34 @@ if "user_input_openai_api_key" not in st.session_state:
 
 if "user_uploaded_pdf_text" not in st.session_state:
     st.session_state["user_uploaded_pdf_text"] = None
+
+if "disclaimer_accepted" not in st.session_state:
+    st.session_state["disclaimer_accepted"] = False
+
+# Panel disclaimera AI - zgodność z Art. 50 AI Act
+if not st.session_state["disclaimer_accepted"]:
+    st.header("INFORMACJA O SYSTEMIE AI")
+    st.markdown(
+        """
+        Rozmawiasz z **asystentem sztucznej inteligencji** opartym na technologii OpenAI.
+        System przetwarza informacje z Kodeksu Cywilnego, Kodeksu Pracy oraz wybranych orzeczeń sądowych.
+        """
+    )
+    st.warning(
+        """
+        **WAŻNE ZASTRZEŻENIA:**
+        - To **NIE jest porada prawna** w rozumieniu prawa
+        - Informacje mają charakter **wyłącznie edukacyjny**
+        - W sprawach indywidualnych **skonsultuj się z adwokatem lub radcą prawnym**
+        - System może generować **niepełne lub nieaktualne** informacje
+        """
+    )
+    st.caption("System zgodny z EU AI Act (Art. 50) | Klasyfikacja: ograniczone ryzyko (limited-risk)")
+
+    if st.button("Rozumiem i akceptuję warunki", use_container_width=True):
+        st.session_state["disclaimer_accepted"] = True
+        st.rerun()
+    st.stop()
 
 # Creating object for LLM
 llm_model_instance = LLMModel(api_key=st.session_state["user_input_openai_api_key"])
@@ -117,10 +146,16 @@ if not st.session_state["data_imported"]:
 st.sidebar.title("Ustawienia")
 
 model_tokens = st.sidebar.slider(
-    "Maksymalna ilość tokenów", min_value=500, max_value=2500, value=1500
-)  # this is a widget
+    "Maksymalna ilość tokenów",
+    min_value=500, max_value=2500, value=1500,
+    help="Tokeny to jednostki tekstu (słowa lub ich części). Wyższa wartość pozwala na dłuższe odpowiedzi, ale zwiększa czas generowania i koszt.",
+)
 
-model_temperature = st.sidebar.slider("Kreatywność modelu", max_value=100)
+model_temperature = st.sidebar.slider(
+    "Kreatywność modelu",
+    max_value=100,
+    help="Określa losowość odpowiedzi. Niska wartość (0-30) = precyzyjne, przewidywalne odpowiedzi. Wysoka wartość (70-100) = bardziej kreatywne, ale mniej przewidywalne odpowiedzi.",
+)
 
 # User st.radio for choosing data collections for RAG
 chosen_collection_r_button = st.sidebar.radio(
@@ -171,6 +206,25 @@ if api_key_available:
 
 if st.session_state["data_imported"]:
     st.sidebar.success("Dostęp do danych prawnych jest gotowy.")
+
+# Informacje o systemie - zgodność z Art. 50 AI Act
+st.sidebar.markdown("---")
+st.sidebar.markdown("### Informacje o systemie")
+st.sidebar.markdown(
+    f"**Baza wiedzy aktualizowana:** {datetime.date.today()}"
+)
+st.sidebar.markdown(
+    """
+    **Źródła danych:**
+    - Kodeks Cywilny
+    - Kodeks Pracy
+    - Orzeczenia sądowe
+    """
+)
+st.sidebar.markdown("---")
+st.sidebar.caption(
+    "System AI - informacje mają charakter edukacyjny, nie stanowią porady prawnej."
+)
 
 # st.sidebar.write(f"llm temp: {llm.temperature}, llm max tokens: {llm.max_tokens}")  # For debugging
 
@@ -345,6 +399,9 @@ if "messages" not in st.session_state:
 for msg in st.session_state["messages"]:
     with st.chat_message(msg["role"]):
         st.write(msg["content"])
+        # Stopka przy odpowiedziach asystenta - zgodność z Art. 50 AI Act
+        if msg["role"] == "assistant":
+            st.caption("*Wygenerowano przez AI - Nie stanowi porady prawnej*")
 
 # USER INPUT
 user_input = st.chat_input("Wpisz swoje pytanie prawne tutaj:")
@@ -375,6 +432,8 @@ if user_input:
         )
         with st.chat_message("assistant"):
             st.write(response.content)
+            # Stopka przy odpowiedziach asystenta - zgodność z Art. 50 AI Act
+            st.caption("*Wygenerowano przez AI - Nie stanowi porady prawnej*")
 
 
 print("END OF THE ITERATION")
