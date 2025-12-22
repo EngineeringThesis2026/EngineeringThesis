@@ -109,7 +109,15 @@ def download_pdf(ruling_url, output_folder):
         # Change /details/ to /content/
         if "/details/" in ruling_url:
             ruling_url = ruling_url.replace("/details/", "/content/")
-            print("Changed to /content/")
+
+        # Check if file already exists
+        parts = ruling_url.rstrip("/").split("/")
+        if parts:
+            case_id = parts[-1].replace("$N/", "")
+            file_path = Path(output_folder) / f"{case_id}.pdf"
+            if file_path.exists():
+                print(f"{case_id}.pdf already exists - skipping")
+                return str(file_path)
 
         print("Getting ruling...")
 
@@ -185,20 +193,28 @@ def download_pdf(ruling_url, output_folder):
 def download_codes():
     """Downloads Kodeks cywilny and Kodeks pracy from ISAP."""
     Path("app/data/civil_code").mkdir(parents=True, exist_ok=True)
-    print("Downloading kodeks_cywilny.pdf...")
-    r = requests.get(
-        "https://isap.sejm.gov.pl/isap.nsf/download.xsp/WDU19640160093/U/D19640093Lj.pdf",
-        timeout=60,
-    )
-    Path("app/data/civil_code/kodeks_cywilny.pdf").write_bytes(r.content)
+    civil_code_path = Path("app/data/civil_code/kodeks_cywilny.pdf")
+    if civil_code_path.exists():
+        print("kodeks_cywilny.pdf already exists - skipping")
+    else:
+        print("Downloading kodeks_cywilny.pdf...")
+        r = requests.get(
+            "https://isap.sejm.gov.pl/isap.nsf/download.xsp/WDU19640160093/U/D19640093Lj.pdf",
+            timeout=60,
+        )
+        civil_code_path.write_bytes(r.content)
 
     Path("app/data/labor_code").mkdir(parents=True, exist_ok=True)
-    print("Downloading kodeks_pracy.pdf...")
-    r = requests.get(
-        "https://isap.sejm.gov.pl/isap.nsf/download.xsp/WDU19740240141/U/D19740141Lj.pdf",
-        timeout=60,
-    )
-    Path("app/data/labor_code/kodeks_pracy.pdf").write_bytes(r.content)
+    labor_code_path = Path("app/data/labor_code/kodeks_pracy.pdf")
+    if labor_code_path.exists():
+        print("kodeks_pracy.pdf already exists - skipping")
+    else:
+        print("Downloading kodeks_pracy.pdf...")
+        r = requests.get(
+            "https://isap.sejm.gov.pl/isap.nsf/download.xsp/WDU19740240141/U/D19740141Lj.pdf",
+            timeout=60,
+        )
+        labor_code_path.write_bytes(r.content)
 
 
 # FUNCTION 5: Main scraping function
