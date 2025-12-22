@@ -35,7 +35,7 @@ jobs:
             --zone=${{ secrets.GCP_ZONE }} \
             --command='
               cd ~/legal-app && \
-              pip3 install --user -q requests beautifulsoup4 && \
+              pip3 install --user --break-system-packages -q requests beautifulsoup4 && \
               python3 app/scraper.py 10 && \
               sudo docker compose down && \
               sudo docker compose up -d --build && \
