@@ -29,7 +29,7 @@ setup:
 # Scrape court rulings (hidden from help)
 scrape:
 	@echo "Downloading rulings..."
-	python app/scraper.py
+	python app/scraper.py 
 
 # Main command: scrape + run Docker
 run: scrape run-only

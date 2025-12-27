@@ -19,7 +19,7 @@ HEADERS = {
 }
 
 # Delay between requests (seconds)
-DELAY = 0.5
+DELAY = 2
 
 
 # FUNCTION 1: Getting page with results
