@@ -13,6 +13,13 @@ collections_names_dict = {
     "labor_code_collection_name": "labor_code",
 }
 
+# Mapowanie wewnętrznych nazw kolekcji na przyjazne dla użytkownika
+collection_display_names = {
+    "KODEKS_CYWILNY": "Kodeks Cywilny",
+    "KODEKS_PRACY": "Kodeks Pracy",
+    "INNE": "Inna kategoria prawa",
+}
+
 
 def build_history():
     return "\n".join(
@@ -22,9 +29,13 @@ def build_history():
 
 def transform_to_conversation_text() -> str:
     """Loop through the history of all messages in a session and save all the contents to a string variable, then return it."""
+    role_display_names = {
+        "user": "Użytkownik",
+        "assistant": "Asystent prawny",
+    }
     conversation_text = "\n\n".join(
         [
-            f"{msg['role'].capitalize()}: {msg['content']}"
+            f"{role_display_names.get(msg['role'], msg['role'])}: {msg['content']}"
             for msg in st.session_state.messages
             if msg["role"] != "system"
         ]
@@ -327,9 +338,10 @@ def rag_chain_fn(
             print(
                 f"=========Collection selection answer=========:\n{collection_selection_answer}"
             )  # For debugging
-            st.sidebar.write(
-                f"Wybór kolekcji przez model: {collection_selection_answer}"
+            display_name = collection_display_names.get(
+                collection_selection_answer, collection_selection_answer
             )
+            st.sidebar.info(f"Źródło danych: {display_name}")
 
             if collection_selection_answer == "KODEKS_CYWILNY":
                 retriever = civil_code_retriever
