@@ -301,7 +301,7 @@ def rag_chain_fn(
             history=conv_history,
             user_uploaded_pdf_text=user_uploaded_pdf_text,
         )
-        st.write(messages)  # For debugging
+        # st.write(messages)  # For debugging
         return llm.invoke(messages)
     else:
         # Check which data collection to use based on user choice
