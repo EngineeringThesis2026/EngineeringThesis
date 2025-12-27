@@ -346,7 +346,7 @@ def rag_chain_fn(
                     history=conv_history,
                     user_uploaded_pdf_text=user_uploaded_pdf_text,
                 )
-                st.write(messages)  # For debugging
+                # st.write(messages)  # For debugging
                 return llm.invoke(messages)
             elif collection_selection_answer == "KODEKS_PRACY":
                 retriever = labor_code_retriever
@@ -360,7 +360,7 @@ def rag_chain_fn(
                     history=conv_history,
                     user_uploaded_pdf_text=user_uploaded_pdf_text,
                 )
-                st.write(messages)  # For debugging
+                # st.write(messages)  # For debugging
                 return llm.invoke(messages)
 
             else:
@@ -374,7 +374,7 @@ def rag_chain_fn(
                     history=conv_history,
                     user_uploaded_pdf_text=user_uploaded_pdf_text,
                 )
-                st.write(messages)  # For debugging
+                # st.write(messages)  # For debugging
                 return llm.invoke(messages)
 
         docs = retriever.invoke(question)  # retrieve relevant documents
@@ -389,7 +389,7 @@ def rag_chain_fn(
             history=conv_history,
             user_uploaded_pdf_text=user_uploaded_pdf_text,
         )
-        st.write(messages)  # For debugging
+        # st.write(messages)  # For debugging
         return llm.invoke(messages)
 
 
