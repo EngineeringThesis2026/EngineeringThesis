@@ -49,7 +49,7 @@ st.set_page_config(
     page_icon="app/icon.png",
 )
 
-st.title("Asystent informacji prawnej")
+st.title("Interaktywny system doradczy do konsultacji prawnych oparty na sztucznej inteligencji")
 
 # Checking the time when the conversation starts
 if "conversation_data" not in st.session_state:
@@ -312,7 +312,7 @@ def rag_chain_fn(
             history=conv_history,
             user_uploaded_pdf_text=user_uploaded_pdf_text,
         )
-        st.write(messages)  # For debugging
+        #st.write(messages)  # For debugging
         return llm.invoke(messages)
     else:
         # Check which data collection to use based on user choice
