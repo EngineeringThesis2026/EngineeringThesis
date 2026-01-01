@@ -377,7 +377,7 @@ def rag_chain_fn(
 
             else:
                 st.write(
-                    """Model wykrył ze tematem rozmowy jest inna kategoria prawa niz prowao cywilne lub pracy.
+                    """Model wykrył, że tematem rozmowy jest inna kategoria prawa niz prowao cywilne lub pracy.
                             W tym wypadku model dokonuje odpowiedzi bez dodatkowej bazy wiedzy."""
                 )  # TODO: CHANGE NEEDED ->
                 messages = prompt_template.format_messages(
