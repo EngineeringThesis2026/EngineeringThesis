@@ -226,7 +226,7 @@ EngineeringThesis/
     ├── upload_pdf_file.py     # PDF upload handling
     ├── vector_database.py     # Qdrant vector database client
     └── data/                  # Legal PDF documents
-        ├── civil_code/
-        ├── labor_code/
-        └── rulings
+        ├── civil_code/        # Civil code
+        ├── labor_code/        # Labor code
+        └── rulings/           # Rulings 
 ```
