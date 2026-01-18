@@ -205,12 +205,11 @@ EngineeringThesis/
 ├── compose.yaml               # Docker Compose configuration
 ├── Dockerfile                 # Docker container definition
 ├── Makefile                   # Build automation
-├── environment.yml            # Conda environment specification
 ├── README.md                  # Project documentation
 ├── requirements.txt           # Python dependencies
 │
 ├── .streamlit/
-│   ├── secrets.toml           # OpenAI API key (not in git)
+│   ├── config.toml            # UI theme and visual interface settings
 │   └── secrets.toml.example   # Template for secrets file
 │
 ├── scripts/                   # Makefile helper scripts
@@ -227,4 +226,7 @@ EngineeringThesis/
     ├── upload_pdf_file.py     # PDF upload handling
     ├── vector_database.py     # Qdrant vector database client
     └── data/                  # Legal PDF documents
+        ├── civil_code/
+        ├── labor_code/
+        └── rulings
 ```
