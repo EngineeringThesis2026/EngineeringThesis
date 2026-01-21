@@ -1,5 +1,12 @@
 # Makefile
 
+# Detect OS and set Python interpreter
+ifeq ($(OS),Windows_NT)
+    PYTHON = python
+else
+    PYTHON = python3
+endif
+
 .PHONY: run run-only stop lint help scrape setup logs restart
 
 # Default command - display help
@@ -16,11 +23,11 @@ help:
 # Setup development environment
 setup:
 	@echo "### Checking system requirements ###"
-	@python scripts/check_requirements.py
+	@$(PYTHON) scripts/check_requirements.py
 	@echo "### Installing Python dependencies ###"
-	pip install -r requirements.txt
+	$(PYTHON) -m pip install -r requirements.txt
 	@echo "### Checking configuration ###"
-	@python scripts/check_config.py
+	@$(PYTHON) scripts/check_config.py
 	@echo "### Setup complete! ###"
 	@echo "Next steps:"
 	@echo "  1. Edit .streamlit/secrets.toml and add OPENAI API key"
@@ -29,7 +36,7 @@ setup:
 # Scrape court rulings (hidden from help)
 scrape:
 	@echo "Downloading rulings..."
-	python app/scraper.py 5
+	$(PYTHON) app/scraper.py 5
 
 # Main command: scrape + run Docker
 run: scrape run-only
@@ -38,7 +45,7 @@ run: scrape run-only
 run-only:
 	@echo "Starting application..."
 	docker compose up --build -d
-	@python scripts/open_browser.py
+	@$(PYTHON) scripts/open_browser.py
 	@echo "Showing logs (Ctrl+C to exit)..."
 	docker compose logs -f
 
