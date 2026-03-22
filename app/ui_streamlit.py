@@ -2,6 +2,7 @@ import streamlit as st
 import datetime
 from llm_model import LLMModel
 from vector_database import QdrantVectorDatabase
+from reranker import Reranker
 import process_data
 import prompt_texts
 import upload_pdf_file
@@ -106,10 +107,27 @@ if "vector_database" not in st.session_state:
 
 vector_database = st.session_state["vector_database"]
 
+# Creating Reranker instance (store in session_state)
+if "reranker" not in st.session_state:
+    st.session_state["reranker"] = Reranker()
+
+reranker = st.session_state["reranker"]
+
 if not st.session_state["data_imported"]:
     with st.spinner("Importowanie danych... Proszę czekać."):
-        # sleep(5)  # Simulating a delay for data import
+        # Expected vector dimension for the current embedding model
+        _expected_vector_size = 1024
+
         for collection_name in collections_names_dict.values():
+            # Check vector dimension compatibility — delete stale collections
+            if not vector_database.collection_vector_size_matches(
+                collection_name, _expected_vector_size
+            ):
+                print(
+                    f"Collection '{collection_name}' has incompatible vector size - recreating"
+                )
+                vector_database.delete_collection_if_exists(collection_name)
+
             # Check if collection already has data - if true ---> skip import
             if vector_database.collection_has_data(collection_name):
                 print(f"Collection '{collection_name}' already has data - skipping")
@@ -186,14 +204,6 @@ chosen_collection_r_button = st.sidebar.radio(
     index=2,
 )
 
-# For debugging
-# if chosen_collection_r_button == "Kodeks cywilny":
-#     st.sidebar.write("Wybrałeś Kodeks cywilny.")
-# elif chosen_collection_r_button == "Kodeks pracy":
-#     st.sidebar.write("Wybrałeś Kodeks pracy.")
-# else:
-#     st.sidebar.write("Wybrałeś Automatyczny wybór kolekcji przez model.")
-
 # MAIN LOGIC
 # Creating LLM instance with user-defined settings
 api_key_available = st.session_state["user_input_openai_api_key"] or st.secrets.get(
@@ -241,8 +251,6 @@ st.sidebar.caption(
     "System AI - informacje mają charakter edukacyjny, nie stanowią porady prawnej."
 )
 
-# st.sidebar.write(f"llm temp: {llm.temperature}, llm max tokens: {llm.max_tokens}")  # For debugging
-
 # Chat Prompt Template for question classification
 question_classification_prompt = LLMModel.create_chat_prompt_template(
     system_template=prompt_texts.text_for_system_template_question_classification_prompt,
@@ -279,6 +287,14 @@ def combine_docs(docs):
     return "\n\n".join([f"{d.metadata}\n{d.page_content}" for d in docs])
 
 
+def retrieve_and_rerank(retriever, question):
+    """Retrieve documents and rerank them using the cross-encoder reranker."""
+    docs = retriever.invoke(question)
+    if docs:
+        docs = reranker.rerank(question, docs)
+    return docs
+
+
 def rag_chain_fn(
     question: str,
     retriever=rulings_retriever,
@@ -306,7 +322,8 @@ def rag_chain_fn(
     )
     classification_response = llm_question_classifier.invoke(msg_to_classify)
     classification_answer = classification_response.content.strip().upper()
-    print(f"Classification answer: {classification_answer}")  # For debugging
+    print(f"Classification answer: {classification_answer}")
+
     if classification_answer == "NIE":
         messages = prompt_template.format_messages(
             question=question,
@@ -314,7 +331,6 @@ def rag_chain_fn(
             history=conv_history,
             user_uploaded_pdf_text=user_uploaded_pdf_text,
         )
-        # st.write(messages)  # For debugging
         return llm.invoke(messages)
     else:
         # Check which data collection to use based on user choice
@@ -339,7 +355,7 @@ def rag_chain_fn(
             )
             print(
                 f"=========Collection selection answer=========:\n{collection_selection_answer}"
-            )  # For debugging
+            )
             display_name = collection_display_names.get(
                 collection_selection_answer, collection_selection_answer
             )
@@ -347,11 +363,9 @@ def rag_chain_fn(
 
             if collection_selection_answer == "KODEKS_CYWILNY":
                 retriever = civil_code_retriever
-                # Adding bonus informations from vector db rulings for civil code cases.
-                rulings_docs = rulings_retriever.invoke(question)
+                rulings_docs = retrieve_and_rerank(rulings_retriever, question)
                 ruling_context = combine_docs(rulings_docs)
-                # informations from civil_code vector db
-                docs = retriever.invoke(question)
+                docs = retrieve_and_rerank(retriever, question)
                 civil_code_context = combine_docs(docs)
                 context = civil_code_context + " " + ruling_context
                 messages = prompt_template.format_messages(
@@ -360,50 +374,40 @@ def rag_chain_fn(
                     history=conv_history,
                     user_uploaded_pdf_text=user_uploaded_pdf_text,
                 )
-                # st.write(messages)  # For debugging
                 return llm.invoke(messages)
             elif collection_selection_answer == "KODEKS_PRACY":
                 retriever = labor_code_retriever
-                docs = retriever.invoke(question)  # retrieve relevant documents
+                docs = retrieve_and_rerank(retriever, question)
                 context = combine_docs(docs)
-                print("==" * 20)
-                print(context)  # combine docks page_content's into a string
                 messages = prompt_template.format_messages(
                     question=question,
                     context=context,
                     history=conv_history,
                     user_uploaded_pdf_text=user_uploaded_pdf_text,
                 )
-                # st.write(messages)  # For debugging
                 return llm.invoke(messages)
 
             else:
                 st.write(
                     """Model wykrył, że tematem rozmowy jest inna kategoria prawa niz prowao cywilne lub pracy.
                             W tym wypadku model dokonuje odpowiedzi bez dodatkowej bazy wiedzy."""
-                )  # TODO: CHANGE NEEDED ->
+                )
                 messages = prompt_template.format_messages(
                     question=question,
                     context="brak kontekstu",
                     history=conv_history,
                     user_uploaded_pdf_text=user_uploaded_pdf_text,
                 )
-                # st.write(messages)  # For debugging
                 return llm.invoke(messages)
 
-        docs = retriever.invoke(question)  # retrieve relevant documents
-        print(docs)
+        docs = retrieve_and_rerank(retriever, question)
         context = combine_docs(docs)
-        print("==" * 20)
-        print(context)  # combine docks page_content's into a string
-        # print(context)  # For debugging
         messages = prompt_template.format_messages(
             question=question,
             context=context,
             history=conv_history,
             user_uploaded_pdf_text=user_uploaded_pdf_text,
         )
-        # st.write(messages)  # For debugging
         return llm.invoke(messages)
 
 

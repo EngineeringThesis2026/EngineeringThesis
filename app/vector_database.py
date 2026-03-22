@@ -4,13 +4,19 @@ from qdrant_client.models import Distance, VectorParams
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 
-# from langchain_community.embeddings import HuggingFaceEmbeddings
-
 from langchain_huggingface import HuggingFaceEmbeddings
 
-embeddings_for_qdrant_vector_store = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/all-MiniLM-L6-v2"
-)
+_MODEL_NAME = "sdadas/mmlw-retrieval-roberta-large-v2"
+_QUERY_PREFIX = "[query]: "
+
+
+class QueryPrefixEmbeddings(HuggingFaceEmbeddings):
+    """HuggingFaceEmbeddings that prepends a prefix to queries for asymmetric retrieval."""
+
+    query_prefix: str = ""
+
+    def embed_query(self, text: str) -> list[float]:
+        return super().embed_query(self.query_prefix + text)
 
 
 # Support both Docker and local setups
@@ -28,8 +34,9 @@ class QdrantVectorDatabase:
     def __init__(self, url: str | None = None):
         self.url = url or os.getenv("QDRANT_URL", "http://localhost:6333")
         self.client = QdrantClient(url=self.url)
-        self.embeddings = HuggingFaceEmbeddings(
-            model_name="sentence-transformers/all-MiniLM-L6-v2"
+        self.embeddings = QueryPrefixEmbeddings(
+            model_name=_MODEL_NAME,
+            query_prefix=_QUERY_PREFIX,
         )
 
     def delete_collection_if_exists(self, collection_name: str):
@@ -66,6 +73,15 @@ class QdrantVectorDatabase:
             return False
         info = self.client.get_collection(collection_name)
         return info.points_count > 0
+
+    def collection_vector_size_matches(
+        self, collection_name: str, expected_size: int
+    ) -> bool:
+        """Check if existing collection's vector dimension matches expected size."""
+        if not self.client.collection_exists(collection_name):
+            return True
+        info = self.client.get_collection(collection_name)
+        return info.config.params.vectors.size == expected_size
 
     @staticmethod
     def create_points_from_embeddings(embeddings: list) -> list:
@@ -132,5 +148,5 @@ class QdrantVectorDatabase:
         store = self.get_vector_store(collection_name)
         return store.as_retriever(
             search_type="similarity",
-            search_kwargs={"k": 1},
+            search_kwargs={"k": 10},
         )

@@ -12,7 +12,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 # from langchain_openai import OpenAIEmbeddings
 from sentence_transformers import SentenceTransformer
 
-_embedding_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+_embedding_model = SentenceTransformer("sdadas/mmlw-retrieval-roberta-large-v2")
 
 
 def get_data_folder_path(destination_folder: str) -> Path:
@@ -76,7 +76,7 @@ def split_docks_into_chunks(
     """
 
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000, chunk_overlap=200, add_start_index=True
+        chunk_size=chunk_size, chunk_overlap=chunk_overlap, add_start_index=True
     )
     all_splits = text_splitter.split_documents(documents)
     return all_splits
