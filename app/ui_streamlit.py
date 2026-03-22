@@ -204,6 +204,13 @@ chosen_collection_r_button = st.sidebar.radio(
     index=2,
 )
 
+st.sidebar.markdown("---")
+debug_mode = st.sidebar.toggle(
+    "Tryb debugowania pipeline",
+    value=False,
+    help="Pokazuje szczegoly przetwarzania zapytania: klasyfikacja, retrieval, reranking, kontekst.",
+)
+
 # MAIN LOGIC
 # Creating LLM instance with user-defined settings
 api_key_available = st.session_state["user_input_openai_api_key"] or st.secrets.get(
@@ -251,6 +258,8 @@ st.sidebar.caption(
     "System AI - informacje mają charakter edukacyjny, nie stanowią porady prawnej."
 )
 
+# st.sidebar.write(f"llm temp: {llm.temperature}, llm max tokens: {llm.max_tokens}")  # For debugging
+
 # Chat Prompt Template for question classification
 question_classification_prompt = LLMModel.create_chat_prompt_template(
     system_template=prompt_texts.text_for_system_template_question_classification_prompt,
@@ -287,12 +296,44 @@ def combine_docs(docs):
     return "\n\n".join([f"{d.metadata}\n{d.page_content}" for d in docs])
 
 
-def retrieve_and_rerank(retriever, question):
+def retrieve_and_rerank(retriever, question, collection_label=""):
     """Retrieve documents and rerank them using the cross-encoder reranker."""
-    docs = retriever.invoke(question)
-    if docs:
-        docs = reranker.rerank(question, docs)
-    return docs
+    retrieved_docs = retriever.invoke(question)
+
+    if not retrieved_docs:
+        return []
+
+    reranked_docs, all_scored = reranker.rerank_with_debug(question, retrieved_docs)
+
+    # Store debug info if debug mode is on
+    if debug_mode:
+        step_info = {
+            "collection": collection_label,
+            "retrieved_count": len(retrieved_docs),
+            "retrieved_docs": [
+                {
+                    "source": doc.metadata.get("source", "?"),
+                    "page": doc.metadata.get("page_number", "?"),
+                    "preview": doc.page_content[:200],
+                }
+                for doc in retrieved_docs
+            ],
+            "reranker_results": [
+                {
+                    "rank": i + 1,
+                    "score": round(score, 4),
+                    "source": doc.metadata.get("source", "?"),
+                    "page": doc.metadata.get("page_number", "?"),
+                    "preview": doc.page_content[:200],
+                    "selected": doc in reranked_docs,
+                }
+                for i, (score, doc) in enumerate(all_scored)
+            ],
+            "selected_count": len(reranked_docs),
+        }
+        st.session_state["debug_info"]["retrieval_steps"].append(step_info)
+
+    return reranked_docs
 
 
 def rag_chain_fn(
@@ -304,6 +345,18 @@ def rag_chain_fn(
     question_classification_prompt=question_classification_prompt,
 ):
     """RAG: retrieves documents, combines context, and invokes LLM"""
+
+    # Initialize debug info for this query
+    if debug_mode:
+        st.session_state["debug_info"] = {
+            "query": question,
+            "query_with_prefix": f"[query]: {question}",
+            "classification": None,
+            "collection_selected": None,
+            "retrieval_steps": [],
+            "final_context": None,
+            "rag_used": False,
+        }
 
     # Build conversation history
     conv_history = build_history()
@@ -324,21 +377,34 @@ def rag_chain_fn(
     classification_answer = classification_response.content.strip().upper()
     print(f"Classification answer: {classification_answer}")
 
+    if debug_mode:
+        st.session_state["debug_info"]["classification"] = classification_answer
+
     if classification_answer == "NIE":
+        context = "brak kontekstu"
+        if debug_mode:
+            st.session_state["debug_info"]["final_context"] = context
         messages = prompt_template.format_messages(
             question=question,
-            context="brak kontekstu",
+            context=context,
             history=conv_history,
             user_uploaded_pdf_text=user_uploaded_pdf_text,
         )
         return llm.invoke(messages)
     else:
+        if debug_mode:
+            st.session_state["debug_info"]["rag_used"] = True
+
         # Check which data collection to use based on user choice
         if chosen_collection_r_button == "Kodeks cywilny":
             retriever = civil_code_retriever
+            if debug_mode:
+                st.session_state["debug_info"]["collection_selected"] = "Kodeks Cywilny (manual)"
 
         elif chosen_collection_r_button == "Kodeks pracy":
             retriever = labor_code_retriever
+            if debug_mode:
+                st.session_state["debug_info"]["collection_selected"] = "Kodeks Pracy (manual)"
 
         elif chosen_collection_r_button == "Automatyczny wybór":
             # Ask the llm model to choose the collection
@@ -361,13 +427,20 @@ def rag_chain_fn(
             )
             st.sidebar.info(f"Źródło danych: {display_name}")
 
+            if debug_mode:
+                st.session_state["debug_info"]["collection_selected"] = f"{display_name} (auto)"
+
             if collection_selection_answer == "KODEKS_CYWILNY":
                 retriever = civil_code_retriever
-                rulings_docs = retrieve_and_rerank(rulings_retriever, question)
+                rulings_docs = retrieve_and_rerank(
+                    rulings_retriever, question, "Orzeczenia"
+                )
                 ruling_context = combine_docs(rulings_docs)
-                docs = retrieve_and_rerank(retriever, question)
+                docs = retrieve_and_rerank(retriever, question, "Kodeks Cywilny")
                 civil_code_context = combine_docs(docs)
                 context = civil_code_context + " " + ruling_context
+                if debug_mode:
+                    st.session_state["debug_info"]["final_context"] = context
                 messages = prompt_template.format_messages(
                     question=question,
                     context=context,
@@ -377,8 +450,10 @@ def rag_chain_fn(
                 return llm.invoke(messages)
             elif collection_selection_answer == "KODEKS_PRACY":
                 retriever = labor_code_retriever
-                docs = retrieve_and_rerank(retriever, question)
+                docs = retrieve_and_rerank(retriever, question, "Kodeks Pracy")
                 context = combine_docs(docs)
+                if debug_mode:
+                    st.session_state["debug_info"]["final_context"] = context
                 messages = prompt_template.format_messages(
                     question=question,
                     context=context,
@@ -392,16 +467,25 @@ def rag_chain_fn(
                     """Model wykrył, że tematem rozmowy jest inna kategoria prawa niz prowao cywilne lub pracy.
                             W tym wypadku model dokonuje odpowiedzi bez dodatkowej bazy wiedzy."""
                 )
+                context = "brak kontekstu"
+                if debug_mode:
+                    st.session_state["debug_info"]["final_context"] = context
                 messages = prompt_template.format_messages(
                     question=question,
-                    context="brak kontekstu",
+                    context=context,
                     history=conv_history,
                     user_uploaded_pdf_text=user_uploaded_pdf_text,
                 )
                 return llm.invoke(messages)
 
-        docs = retrieve_and_rerank(retriever, question)
+        docs = retrieve_and_rerank(
+            retriever,
+            question,
+            "Kodeks Cywilny" if retriever == civil_code_retriever else "Kodeks Pracy",
+        )
         context = combine_docs(docs)
+        if debug_mode:
+            st.session_state["debug_info"]["final_context"] = context
         messages = prompt_template.format_messages(
             question=question,
             context=context,
@@ -411,9 +495,96 @@ def rag_chain_fn(
         return llm.invoke(messages)
 
 
+def render_debug_panel():
+    """Render the debug panel showing the RAG pipeline details for the last query."""
+    debug = st.session_state.get("debug_info")
+    if not debug:
+        return
+
+    with st.expander("Pipeline RAG — szczegoly ostatniego zapytania", expanded=False):
+        # --- Step 1: Query ---
+        st.subheader("1. Zapytanie")
+        st.code(debug["query"], language=None)
+        st.caption(f"Zapytanie z prefixem embeddingowym: `{debug['query_with_prefix']}`")
+
+        st.divider()
+
+        # --- Step 2: Classification ---
+        st.subheader("2. Klasyfikacja pytania")
+        classification = debug["classification"]
+        if classification == "TAK":
+            st.success(f"Klasyfikacja: **{classification}** — pytanie prawne, RAG aktywny")
+        else:
+            st.warning(f"Klasyfikacja: **{classification}** — pytanie nieprawne, odpowiedz bez RAG")
+
+        if not debug["rag_used"]:
+            st.info("Pipeline RAG nie zostal uzytyw dla tego zapytania.")
+            return
+
+        st.divider()
+
+        # --- Step 3: Collection selection ---
+        st.subheader("3. Wybor kolekcji")
+        st.info(f"Wybrana kolekcja: **{debug.get('collection_selected', 'N/A')}**")
+
+        st.divider()
+
+        # --- Step 4: Retrieval + Reranking ---
+        st.subheader("4. Retrieval i Reranking")
+
+        for step in debug.get("retrieval_steps", []):
+            st.markdown(f"#### Kolekcja: {step['collection']}")
+            st.markdown(
+                f"Retriever zwrocil **{step['retrieved_count']}** dokumentow "
+                f"→ Reranker wybral **{step['selected_count']}**"
+            )
+
+            # Reranker results table
+            for item in step["reranker_results"]:
+                rank = item["rank"]
+                score = item["score"]
+                selected = item["selected"]
+                source = item["source"]
+                page = item["page"]
+                preview = item["preview"]
+
+                if selected:
+                    st.markdown(
+                        f"**#{rank}** | Score: `{score}` | "
+                        f"{source} (str. {page}) | WYBRANY"
+                    )
+                else:
+                    st.markdown(
+                        f"#{rank} | Score: `{score}` | "
+                        f"{source} (str. {page}) | odrzucony"
+                    )
+
+                with st.popover(f"Podglad #{rank}"):
+                    st.text(preview + "...")
+
+        st.divider()
+
+        # --- Step 5: Final context ---
+        st.subheader("5. Finalny kontekst wysylany do LLM")
+        final_ctx = debug.get("final_context", "brak")
+        if final_ctx and final_ctx != "brak kontekstu":
+            st.text_area(
+                "Kontekst",
+                value=final_ctx,
+                height=300,
+                disabled=True,
+                label_visibility="collapsed",
+            )
+        else:
+            st.info("Brak kontekstu RAG — model odpowiada na podstawie wlasnej wiedzy.")
+
+
 # INIT SESSION HISTORY
 if "messages" not in st.session_state:
     st.session_state["messages"] = []
+
+if "debug_info" not in st.session_state:
+    st.session_state["debug_info"] = None
 
 # DISPLAY HISTORY
 for msg in st.session_state["messages"]:
@@ -422,6 +593,10 @@ for msg in st.session_state["messages"]:
         # Footer for assistant responses - EU AI Act Art. 50 compliance
         if msg["role"] == "assistant":
             st.caption("*Wygenerowano przez AI - Nie stanowi porady prawnej*")
+
+# Show debug panel for last query (persists between reruns)
+if debug_mode and st.session_state.get("debug_info"):
+    render_debug_panel()
 
 # USER INPUT
 user_input = st.chat_input("Wpisz swoje pytanie prawne tutaj:")
@@ -454,6 +629,10 @@ if user_input:
             st.write(response.content)
             # Footer for assistant responses - EU AI Act Art. 50 compliance
             st.caption("*Wygenerowano przez AI - Nie stanowi porady prawnej*")
+
+    # Show debug panel immediately after new response
+    if debug_mode and st.session_state.get("debug_info"):
+        render_debug_panel()
 
 
 print("END OF THE ITERATION")
