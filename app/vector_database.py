@@ -37,6 +37,7 @@ class QdrantVectorDatabase:
         self.embeddings = QueryPrefixEmbeddings(
             model_name=_MODEL_NAME,
             query_prefix=_QUERY_PREFIX,
+            model_kwargs={"model_kwargs": {"torch_dtype": "float16"}},
         )
 
     def delete_collection_if_exists(self, collection_name: str):

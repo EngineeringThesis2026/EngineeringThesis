@@ -20,6 +20,7 @@ class Reranker:
             model_name,
             activation_fn=torch.nn.Identity(),
             max_length=max_length,
+            model_kwargs={"torch_dtype": torch.float16},
         )
 
     def rerank(self, query: str, documents: list) -> list:

@@ -10,9 +10,13 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 # Embeddings
 # from langchain_openai import OpenAIEmbeddings
+import torch
 from sentence_transformers import SentenceTransformer
 
-_embedding_model = SentenceTransformer("sdadas/mmlw-retrieval-roberta-large-v2")
+_embedding_model = SentenceTransformer(
+    "sdadas/mmlw-retrieval-roberta-large-v2",
+    model_kwargs={"torch_dtype": torch.float16},
+)
 
 
 def get_data_folder_path(destination_folder: str) -> Path:
